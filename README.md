@@ -8,7 +8,7 @@
 ## 运行智能体对打
 先保证`sim = HDDF2Sim(scen, use_tacview=True, save_replay=True, replay_path="replay.acmi")`之后运行demo
 ```sh
-D:\projects\hdbisai\python.exe demo.py
+D:\projects\hdbisai\python.exe demo_raw.py
 ```
 然后进入Tacview，给端口`5555`可以看到实时遥测
 [![image.png](https://i.postimg.cc/wvjNDhWX/image.png)](https://postimg.cc/GB69Csnt)
