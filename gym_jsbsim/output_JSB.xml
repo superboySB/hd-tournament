@@ -1,0 +1,466 @@
+<?xml version="1.0"?>
+ 
+ <PropertyList>
+ 
+ <generic>
+ 
+ 
+ 
+   <output>
+ 
+     <line_separator>newline</line_separator>
+ 
+     <var_separator>newline</var_separator>
+ 
+     <binary_mode>false</binary_mode>
+ 
+ 
+     <chunk>
+ 
+       <name>position_long_gc_deg</name>
+ 
+       <format>position_long_gc_deg %4.7f</format>
+ 
+       <type>double</type>
+ 
+       <node>/fdm/jsbsim/position/long-gc-deg</node>
+ 
+     </chunk>
+
+
+     <chunk>
+ 
+       <name>position_lat_geod_deg</name>
+ 
+       <format>position_lat_geod_deg %4.7f</format>
+ 
+       <type>double</type>
+ 
+       <node>/fdm/jsbsim/position/lat-geod-deg</node>
+ 
+     </chunk>
+	 	 
+	 
+     <chunk>
+ 
+       <name>position_h_sl_ft</name>
+ 
+       <format>position_h_sl_ft %5.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/position/h-sl-ft</node>
+ 
+     </chunk>
+	 
+	 
+     <chunk>
+ 
+       <name>attitude_roll_rad</name>
+ 
+       <format>attitude_roll_rad %4.1f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/attitude/roll-rad</node>
+ 
+     </chunk> 
+	 
+	 	 
+     <chunk>
+ 
+       <name>attitude_pitch_rad</name>
+ 
+       <format>attitude_pitch_rad %4.1f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/attitude/pitch-rad</node>
+ 
+     </chunk> 
+	 	 
+	  	 
+     <chunk>
+ 
+       <name>attitude_psi_deg</name>
+ 
+       <format>attitude_psi_deg %4.1f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/attitude/psi-deg</node>
+ 
+     </chunk> 
+	 
+	 
+     <chunk>
+ 
+       <name>h_agl_ft</name>
+ 
+       <format>h_agl_ft %.2f</format>
+ 
+       <type>double</type>
+ 
+       <node>fdm/jsbsim/position/h-agl-ft</node>
+ 
+     </chunk> 
+	 
+	  
+     <chunk>
+ 
+       <name>aero_alpha_deg</name>
+ 
+       <format>aero_alpha_deg %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>fdm/jsbsim/aero/alpha-deg</node>
+ 
+     </chunk> 
+	 
+	 	  
+     <chunk>
+ 
+       <name>aero_beta_deg</name>
+ 
+       <format>aero_beta_deg %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/aero/beta-deg</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>velocities_vc_kts</name>
+ 
+       <format>velocities_vc_kts %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/vc-kts</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>u_fps</name>
+ 
+       <format>u_fps %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/u-fps</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>v_fps</name>
+ 
+       <format>v_fps %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/v-fps</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>w_fps</name>
+ 
+       <format>w_fps %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/w-fps</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>velocities_v_north_fps</name>
+ 
+       <format>velocities_v_north_fps %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/v-north-fps</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>velocities_v_east_fps</name>
+ 
+       <format>velocities_v_east_fps %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/v-east-fps</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>velocities_v_down_fps</name>
+ 
+       <format>velocities_v_down_fps %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/v-down-fps</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>velocities_p_rad_sec</name>
+ 
+       <format>velocities_p_rad_sec %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/p-rad_sec</node>
+ 
+     </chunk> 
+
+
+
+     <chunk>
+ 
+       <name>velocities_q_rad_sec</name>
+ 
+       <format>velocities_q_rad_sec %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/q-rad_sec</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>velocities_r_rad_sec</name>
+ 
+       <format>velocities_r_rad_sec %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/r-rad_sec</node>
+ 
+     </chunk> 
+
+     <chunk>
+ 
+       <name>altitude_rate_fps</name>
+ 
+       <format>altitude_rate_fps %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/h-dot-fps</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>accelerations_Nz</name>
+ 
+       <format>accelerations_Nz %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/accelerations/Nz</node>
+ 
+     </chunk> 
+
+
+
+     <chunk>
+ 
+       <name>accelerations_a_pilot_x_ft_sec2</name>
+ 
+       <format>accelerations_a_pilot_x_ft_sec2 %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/accelerations/a-pilot-x-ft_sec2</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>accelerations_a_pilot_y_ft_sec2</name>
+ 
+       <format>accelerations_a_pilot_y_ft_sec2 %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/accelerations/a-pilot-y-ft_sec2</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>accelerations_a_pilot_z_ft_sec2</name>
+ 
+       <format>accelerations_a_pilot_z_ft_sec2 %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/accelerations/a-pilot-z-ft_sec2</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>fcs_left_aileron_pos_norm</name>
+ 
+       <format>fcs_left_aileron_pos_norm %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/fcs/left-aileron-pos-norm</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>fcs_right_aileron_pos_norm</name>
+ 
+       <format>fcs_right_aileron_pos_norm %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/fcs/right-aileron-pos-norm</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>fcs_elevator_pos_norm</name>
+ 
+       <format>fcs_elevator_pos_norm %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/fcs/elevator-pos-norm</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>fcs_rudder_pos_norm</name>
+ 
+       <format>fcs_rudder_pos_norm %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/fcs/rudder-pos-norm</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>propulsion_engine_thrust_lbs</name>
+ 
+       <format>propulsion_engine_thrust_lbs %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/propulsion/engine/thrust-lbs</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>fcs_speedbrake_pos_norm</name>
+ 
+       <format>fcs_speedbrake_pos_norm %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/fcs/speedbrake-pos-norm</node>
+ 
+     </chunk> 
+
+
+     <chunk>
+ 
+       <name>total_fuel_lbs</name>
+ 
+       <format>30_total_fuel_lbs %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/propulsion/total-fuel-lbs</node>
+ 
+     </chunk> 
+ 
+     <chunk>
+ 
+       <name>velocities_mach</name>
+ 
+       <format>velocities_mach %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/velocities/mach</node>
+ 
+     </chunk> 
+
+     <chunk>
+ 
+       <name>fcs_throttle_pos_norm</name>
+ 
+       <format>fcs_throttle_pos_norm %.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/fdm/jsbsim/fcs/throttle-pos-norm</node>
+ 
+     </chunk> 
+
+     <chunk>
+ 
+       <name>Elapsed Time</name>
+ 
+       <format>99_elasped %4.2f</format>
+ 
+       <type>float</type>
+ 
+       <node>/sim/time/elapsed-sec</node>
+ 
+     </chunk>
+ 
+
+
+
+  </output>
+ 
+ 
+ 
+ </generic>
+ 
+ </PropertyList>     
