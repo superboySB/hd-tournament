@@ -9,7 +9,7 @@ from agents.team_blue.blue_agent_demo import Agent as RedAgent
 with open("scen.json", "r") as fin:
     scen = json.load(fin)
 
-sim = HDDF2Sim(scen, use_tacview=False, save_replay=False, replay_path="replay.acmi")
+sim = HDDF2Sim(scen, use_tacview=True, save_replay=True, replay_path="replay.acmi")
 sim.reset()
 red_agent = RedAgent('red')
 blue_agent = BlueAgent('blue')
