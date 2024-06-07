@@ -3,7 +3,7 @@
 
 ## 依赖
 - [TacView](https://www.tacview.net/download/latest/en/)软件提供可视化
-- 官方提供的Python环境hdbisai（大小为3G左右，或者是叶神准备封装的docker）
+- 官方提供的Python环境hdbisai（解压[压缩包](https://superboysb-my.sharepoint.cn/:u:/g/personal/admin_superboysb_partner_onmschina_cn/EfA3s4y1CLZPg_--J3d5tOsBT112TyhezIcbC2N6W9JMmw?e=SYPKtG)大小为3G左右，或者是叶神准备封装的docker）
 
 ## 运行智能体对打
 先保证`sim = HDDF2Sim(scen, use_tacview=True, save_replay=True, replay_path="replay.acmi")`之后运行demo
