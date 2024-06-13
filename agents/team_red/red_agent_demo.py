@@ -238,7 +238,7 @@ class Agent:
             cmd_dict[ally_ind] = {
                 'control': action
             }
-            if len(weapon_launch_info):
-                cmd_dict[ally_ind]['weapon'] = weapon_launch_info
+            # if len(weapon_launch_info):
+            #     cmd_dict[ally_ind]['weapon'] = weapon_launch_info
         # 返回指令。
         return cmd_dict

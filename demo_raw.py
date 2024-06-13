@@ -3,8 +3,10 @@ import numpy as np
 from hddf2sim.hddf2sim import HDDF2Sim
 from hddf2sim.conf import default_conf
 
-from agents.team_blue_raw.blue_agent import Agent as BlueAgent
-from agents.team_blue_raw.blue_agent import Agent as RedAgent
+# from agents.team_blue.blue_agent import Agent as BlueAgent
+# from agents.team_blue.blue_agent import Agent as RedAgent
+from agents.team_blue.blue_agent_demo import Agent as BlueAgent
+from agents.team_blue.blue_agent_demo import Agent as RedAgent
 
 with open("scen.json", "r") as fin:
     scen = json.load(fin)
