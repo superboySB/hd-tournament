@@ -40,18 +40,18 @@ import ray
 from ray import air, tune
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.algorithms.ppo import PPOConfig
-from ray.rllib.env.utils import try_import_pyspiel, try_import_open_spiel
-from ray.rllib.env.wrappers.open_spiel import OpenSpielEnv
+
+from open_spiel import OpenSpielEnv
 from ray.rllib.examples.policy.random_policy import RandomPolicy
-from ray.rllib.examples.self_play_with_open_spiel import ask_user_for_action
 from ray.rllib.policy.policy import PolicySpec
 from ray.tune import register_env
 
-open_spiel = try_import_open_spiel(error=True)
-pyspiel = try_import_pyspiel(error=True)
+# open_spiel = try_import_open_spiel(error=True)
+# pyspiel = try_import_pyspiel(error=True)
 
+# from ray.rllib.env.utils import try_import_pyspiel, try_import_open_spiel
 # Import after try_import_open_spiel, so we can error out with hints
-from open_spiel.python.rl_environment import Environment  # noqa: E402
+# from open_spiel.python.rl_environment import Environment  # noqa: E402
 
 
 def get_cli_args():
@@ -291,13 +291,7 @@ class LeagueBasedSelfPlayCallback(DefaultCallbacks):
 
 
 if __name__ == "__main__":
-
     args = get_cli_args()
-    ray.init(
-        num_cpus=args.num_cpus or None,
-        include_dashboard=False,
-    )
-
     register_env("open_spiel_env", lambda _: OpenSpielEnv(pyspiel.load_game(args.env)))
 
     def policy_mapping_fn(agent_id, episode, worker, **kwargs):
@@ -309,7 +303,8 @@ if __name__ == "__main__":
         .environment("open_spiel_env")
         .framework(args.framework)
         .callbacks(LeagueBasedSelfPlayCallback)
-        .rollouts(num_envs_per_worker=5)
+        .resources(num_gpus=int(os.environ.get("RLLIB_NUM_GPUS", "0")))
+        .rollouts(num_rollout_workers = 32, num_envs_per_worker=5)
         .training(num_sgd_iter=20)
         .multi_agent(
             # Initial policy map: All PPO. This will be expanded
@@ -331,9 +326,7 @@ if __name__ == "__main__":
             # At first, only train main_0 (until good enough to win against
             # random).
             policies_to_train=["main"],
-        )
-        # Use GPUs iff `RLLIB_NUM_GPUS` env var set to > 0.
-        .resources(num_cpus = 16, num_gpus=int(os.environ.get("RLLIB_NUM_GPUS", "0")))
+        )        
     )
 
     stop = {
@@ -342,73 +335,18 @@ if __name__ == "__main__":
     }
 
     # Train the "main" policy to play really well using self-play.
-    results = None
-    if not args.from_checkpoint:
-        results = tune.Tuner(
-            "PPO",
-            param_space=config,
-            run_config=air.RunConfig(
-                stop=stop,
-                checkpoint_config=air.CheckpointConfig(
-                    checkpoint_at_end=True,
-                    checkpoint_frequency=10,
-                ),
-                verbose=3,
+    tune.Tuner(
+        "PPO",
+        param_space=config,
+        run_config=air.RunConfig(
+            stop=stop,
+            storage_path=os.path.expanduser("~/ray_results"),
+            checkpoint_config=air.CheckpointConfig(
+                checkpoint_at_end=True,
+                checkpoint_frequency=10,
             ),
-        ).fit()
-
-    # Restore trained Algorithm (set to non-explore behavior) and play against
-    # human on command line.
-    if args.num_episodes_human_play > 0:
-        num_episodes = 0
-        # Switch off exploration for better inference performance.
-        config.explore = False
-        algo = config.build()
-        if args.from_checkpoint:
-            algo.restore(args.from_checkpoint)
-        else:
-            checkpoint = results.get_best_result().checkpoint
-            if not checkpoint:
-                raise ValueError("No last checkpoint found in results!")
-            algo.restore(checkpoint)
-
-        # Play from the command line against the trained agent
-        # in an actual (non-RLlib-wrapped) open-spiel env.
-        human_player = 1
-        env = Environment(args.env)
-
-        while num_episodes < args.num_episodes_human_play:
-            print("You play as {}".format("o" if human_player else "x"))
-            time_step = env.reset()
-            while not time_step.last():
-                player_id = time_step.observations["current_player"]
-                if player_id == human_player:
-                    action = ask_user_for_action(time_step)
-                else:
-                    obs = np.array(time_step.observations["info_state"][player_id])
-                    action = algo.compute_single_action(obs, policy_id="main")
-                    # In case computer chooses an invalid action, pick a
-                    # random one.
-                    legal = time_step.observations["legal_actions"][player_id]
-                    if action not in legal:
-                        action = np.random.choice(legal)
-                time_step = env.step([action])
-                print(f"\n{env.get_state}")
-
-            print(f"\n{env.get_state}")
-
-            print("End of game!")
-            if time_step.rewards[human_player] > 0:
-                print("You win")
-            elif time_step.rewards[human_player] < 0:
-                print("You lose")
-            else:
-                print("Draw")
-            # Switch order of players
-            human_player = 1 - human_player
-
-            num_episodes += 1
-
-        algo.stop()
+            verbose=3,
+        ),
+    ).fit()
 
     ray.shutdown()
