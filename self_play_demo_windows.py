@@ -35,23 +35,23 @@ import os
 import re
 
 import numpy as np
+import functools
 
 import ray
 from ray import air, tune
 from ray.rllib.algorithms.callbacks import DefaultCallbacks
 from ray.rllib.algorithms.ppo import PPOConfig
 
-from open_spiel import OpenSpielEnv
 from ray.rllib.examples.policy.random_policy import RandomPolicy
 from ray.rllib.policy.policy import PolicySpec
 from ray.tune import register_env
 
-# open_spiel = try_import_open_spiel(error=True)
-# pyspiel = try_import_pyspiel(error=True)
 
-# from ray.rllib.env.utils import try_import_pyspiel, try_import_open_spiel
-# Import after try_import_open_spiel, so we can error out with hints
-# from open_spiel.python.rl_environment import Environment  # noqa: E402
+from ray.rllib.env.utils import try_import_pyspiel,try_import_open_spiel
+open_spiel = try_import_open_spiel(error=True)
+pyspiel = try_import_pyspiel(error=True)
+from my_open_spiel import OpenSpielEnv
+from open_spiel.python.rl_environment import Environment  # noqa: E402
 
 
 def get_cli_args():
@@ -107,26 +107,32 @@ def get_cli_args():
 
 
 class LeagueBasedSelfPlayCallback(DefaultCallbacks):
-    def __init__(self):
+    def __init__(self, win_rate_threshold):
         super().__init__()
         # All policies in the league.
         self.main_policies = {"main", "main_0"}
         self.main_exploiters = {"main_exploiter_0", "main_exploiter_1"}
         self.league_exploiters = {"league_exploiter_0", "league_exploiter_1"}
         # Set of currently trainable policies in the league.
-        self.trainable_policies = {"main", "main_exploiter_1", "league_exploiter_1"}
+        self.trainable_policies = {"main"}
         # Set of currently non-trainable (frozen) policies in the league.
         self.non_trainable_policies = {
             "main_0",
             "league_exploiter_0",
             "main_exploiter_0",
         }
+        # The win-rate value reaching of which leads to a new module being added
+        # to the leage (frozen copy of main).
+        self.win_rate_threshold = win_rate_threshold
         # Store the win rates for league overview printouts.
         self.win_rates = {}
 
     def on_train_result(self, *, algorithm, result, **kwargs):
+        # Avoid `self` being pickled into the remote function below.
+        _trainable_policies = self.trainable_policies
+
         # Get the win rate for the train batch.
-        # Note that normally, one should set up a proper evaluation config,
+        # Note that normally, you should set up a proper evaluation config,
         # such that evaluation always happens on the already updated policy,
         # instead of on the already used train_batch.
         for policy_id, rew in result["hist_stats"].items():
@@ -154,16 +160,16 @@ class LeagueBasedSelfPlayCallback(DefaultCallbacks):
 
             # If win rate is good -> Snapshot current policy and decide,
             # whether to freeze the copy or not.
-            if win_rate > args.win_rate_threshold:
+            if win_rate > self.win_rate_threshold:
                 is_main = re.match("^main(_\\d+)?$", policy_id)
                 initializing_exploiters = False
 
                 # First time, main manages a decent win-rate against random:
                 # Add league_exploiter_0 and main_exploiter_0 to the mix.
-                if is_main and len(self.trainable_policies) == 3:
+                if is_main and len(self.trainable_policies) == 1:
                     initializing_exploiters = True
-                    self.trainable_policies.add("league_exploiter_1")
-                    self.trainable_policies.add("main_exploiter_1")
+                    self.trainable_policies.add("league_exploiter_0")
+                    self.trainable_policies.add("main_exploiter_0")
                 else:
                     keep_training = (
                         False
@@ -194,8 +200,7 @@ class LeagueBasedSelfPlayCallback(DefaultCallbacks):
                     print(f"adding new opponents to the mix ({new_pol_id}).")
 
                 # Update our mapping function accordingly.
-                def policy_mapping_fn(agent_id, episode, worker, **kwargs):
-
+                def policy_mapping_fn(agent_id, episode, worker=None, **kwargs):
                     # Pick, whether this is ...
                     type_ = np.random.choice([1, 2])
 
@@ -256,7 +261,7 @@ class LeagueBasedSelfPlayCallback(DefaultCallbacks):
 
                     def _set(worker):
                         worker.set_policy_mapping_fn(policy_mapping_fn)
-                        worker.set_is_policy_to_train(self.trainable_policies)
+                        worker.set_is_policy_to_train(_trainable_policies)
 
                     algorithm.workers.foreach_worker(_set)
                 else:
@@ -302,10 +307,15 @@ if __name__ == "__main__":
         PPOConfig()
         .environment("open_spiel_env")
         .framework(args.framework)
-        .callbacks(LeagueBasedSelfPlayCallback)
+        .callbacks(
+            functools.partial(
+                LeagueBasedSelfPlayCallback,
+                win_rate_threshold=args.win_rate_threshold,
+            )
+        )
         .resources(num_gpus=int(os.environ.get("RLLIB_NUM_GPUS", "0")))
         .rollouts(num_rollout_workers = 32, num_envs_per_worker=5)
-        .training(num_sgd_iter=20)
+        .training(num_sgd_iter=200)
         .multi_agent(
             # Initial policy map: All PPO. This will be expanded
             # to more policy snapshots. This is done in the
