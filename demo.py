@@ -21,7 +21,7 @@ while not sim.done:
     cmds = []
     red_obs = sim.get_obs(side='red')
     red_cmd_dict = red_agent.step(red_obs)
-    # print(red_cmd_dict)
+    print(red_cmd_dict)
     sim.send_commands(red_cmd_dict, cmd_side='red')
     blue_obs = sim.get_obs(side='blue')
     blue_cmd_dict = blue_agent.step(blue_obs)
