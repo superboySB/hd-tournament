@@ -22,9 +22,11 @@ class OpenSpielEnv(MultiAgentEnv):
         self.state = None
 
         # Extract observation- and action spaces from game.
+        # (-inf, inf, 120)
         self.observation_space = Box(
             float("-inf"), float("inf"), (self.env.observation_tensor_size(),)
         )
+        # Descrete(5)
         self.action_space = Discrete(self.env.num_distinct_actions())
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
@@ -52,7 +54,7 @@ class OpenSpielEnv(MultiAgentEnv):
 
             # Compile rewards dict.
             rewards = {ag: r for ag, r in enumerate(self.state.returns())}
-        # Simultaneous game.
+        # Simultaneous game.  Markov games
         else:
             assert self.state.current_player() == -2
             # Apparently, this works, even if one or more actions are invalid.
@@ -115,17 +117,17 @@ class OpenSpielEnv(MultiAgentEnv):
 
 if __name__ == "__main__":
     game = pyspiel.load_game("markov_soccer")
-    env = OpenSpielEnv(game)
+    env = OpenSpielEnv(game)  # 类似洪都的游戏内核
     obs = env.reset()
     done = {"__all__": False}
     step = 0
     while not done["__all__"]:
-        actions = {agent: env.action_space.sample() for agent in range(env.num_agents)}
-        obs, rewards, terminateds, truncateds, info = env.step(actions)
+        actions = {agent: env.action_space.sample() for agent in range(env.num_agents)}  # {0: 3, 1: 1}
+        obs, rewards, terminateds, truncateds, info = env.step(actions)  
         print(f"Step: {step}")
-        print("Observations:", obs)
-        print("Rewards:", rewards)
-        done = terminateds
+        print("Observations:", obs) # {0: np.array[120], 1: np.array[120]}
+        print("Rewards:", rewards)  # {0: 1.0, 1: 1.0}
+        done = terminateds  # {0: False, 1: fasle, __all__: false}, no info
         step += 1
         env.render(mode='human')
     print("Game over.")
