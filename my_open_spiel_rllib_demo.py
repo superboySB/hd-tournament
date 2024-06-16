@@ -313,8 +313,8 @@ if __name__ == "__main__":
                 win_rate_threshold=args.win_rate_threshold,
             )
         )
-        .resources(num_gpus=1)
-        .rollouts(num_rollout_workers = 32, num_envs_per_worker=5)
+        .resources(num_gpus=0)
+        .rollouts(num_rollout_workers = 2, num_envs_per_worker=2)
         .training(num_sgd_iter=200)
         .multi_agent(
             # Initial policy map: All PPO. This will be expanded
@@ -350,7 +350,7 @@ if __name__ == "__main__":
         param_space=config,
         run_config=air.RunConfig(
             stop=stop,
-            storage_path=os.path.expanduser("~/ray_results"),
+            # storage_path=os.path.expanduser("~/ray_results"),
             checkpoint_config=air.CheckpointConfig(
                 checkpoint_at_end=True,
                 checkpoint_frequency=10,
