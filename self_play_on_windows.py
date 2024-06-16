@@ -1,6 +1,6 @@
 """Example showing how one can implement a league-based training workflow.
 
-Uses the open spiel adapter of RLlib with the "markov_soccer" game and
+Uses the hd tournament adapter of RLlib with the "markov_soccer" game and
 a simplified multi-agent, league-based setup:
 https://deepmind.com/blog/article/AlphaStar-Grandmaster-level-in- \
 StarCraft-II-using-multi-agent-reinforcement-learning
@@ -46,13 +46,7 @@ from ray.rllib.examples.policy.random_policy import RandomPolicy
 from ray.rllib.policy.policy import PolicySpec
 from ray.tune import register_env
 
-
-from ray.rllib.env.utils import try_import_pyspiel,try_import_open_spiel
-open_spiel = try_import_open_spiel(error=True)
-pyspiel = try_import_pyspiel(error=True)
-from my_open_spiel import OpenSpielEnv
-from open_spiel.python.rl_environment import Environment  # noqa: E402
-
+from env_wrappers import HDEnv
 
 def get_cli_args():
     """Create CLI parser and return parsed arguments"""
@@ -142,6 +136,7 @@ class LeagueBasedSelfPlayCallback(DefaultCallbacks):
             policy_id = mo.group(1)
 
             # Calculate this policy's win rate.
+            # TODO: 这里可能要修改胜率计算公式，不能用reward来做
             won = 0
             for r in rew:
                 if r > 0.0:  # win = 1.0; loss = -1.0
@@ -222,7 +217,7 @@ class LeagueBasedSelfPlayCallback(DefaultCallbacks):
                         print(f"{league_exploiter} vs {opponent}")
                         return (
                             league_exploiter
-                            if episode.episode_id % 2 == agent_id
+                            if episode.episode_id % 2 == np.floor(int(agent_id)/6)
                             else opponent
                         )
 
@@ -242,7 +237,7 @@ class LeagueBasedSelfPlayCallback(DefaultCallbacks):
                         # print(f"{main_exploiter} vs {main}")
                         return (
                             main_exploiter
-                            if episode.episode_id % 2 == agent_id
+                            if episode.episode_id % 2 == np.floor(int(agent_id)/6)
                             else main
                         )
 
@@ -297,15 +292,19 @@ class LeagueBasedSelfPlayCallback(DefaultCallbacks):
 
 if __name__ == "__main__":
     args = get_cli_args()
-    register_env("open_spiel_env", lambda _: OpenSpielEnv(pyspiel.load_game(args.env)))
+    
+    # test env
+    hd_env = HDEnv(None)
+    register_env("hd_env", lambda config: HDEnv(config))
 
+    # 自博弈策略分配，前六个和后六个是不同的share policy，并且平分回合数
+    # At first, only have main play against the random main exploiter.
     def policy_mapping_fn(agent_id, episode, worker, **kwargs):
-        # At first, only have main play against the random main exploiter.
-        return "main" if episode.episode_id % 2 == agent_id else "main_exploiter_0"
+        return "main" if episode.episode_id % 2 == np.floor(int(agent_id)/6)  else "main_exploiter_0"
 
     config = (
         PPOConfig()
-        .environment("open_spiel_env")
+        .environment("hd_env")
         .framework(args.framework)
         .callbacks(
             functools.partial(
@@ -315,11 +314,11 @@ if __name__ == "__main__":
         )
         .resources(num_gpus=0)
         .rollouts(num_rollout_workers = 2, num_envs_per_worker=2)
-        .training(num_sgd_iter=200)
+        .training(num_sgd_iter=20)
         .multi_agent(
             # Initial policy map: All PPO. This will be expanded
             # to more policy snapshots. This is done in the
-            # custom callback defined above (`LeagueBasedSelfPlayCallback`).
+            # TODO： custom callback defined above (`LeagueBasedSelfPlayCallback`).
             policies={
                 # Our main policy, we'd like to optimize.
                 "main": PolicySpec(),

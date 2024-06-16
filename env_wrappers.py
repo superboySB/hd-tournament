@@ -16,6 +16,12 @@ class HDEnv(MultiAgentEnv):
     def __init__(self, env):
         super().__init__()
         self.env = env
+
+        with open("scen.json", "r") as fin:
+            scen = json.load(fin)
+        sim = HDDF2Sim(scen, use_tacview=False, save_replay=False, replay_path="replay.acmi")
+        self.sim = sim
+
         self.num_agents = 6 * 2
         self.unit_indices = None
         self.reversed_indices = None
@@ -23,13 +29,15 @@ class HDEnv(MultiAgentEnv):
         self.blue_agent = None
         self.red_previous_alive_num = 6
         self.blue_previous_alive_num = 6
+        
         self.observation_space = Box(float("-inf"), float("inf"), (4,))
         self.action_space = Discrete(2)  # 开火、不开
+        self._agent_ids = ['00', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11']
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None):
-        self.env.reset()
+        self.sim.reset()
         # 假设sim.units已经是一个列表或其他容器，包含了所有映射关系 {8315: '00', 7315: '01'}
-        self.unit_indices = {self.env.units[i].ind: f'{i:02}' for i in range(self.num_agents)}
+        self.unit_indices = {self.sim.units[i].ind: f'{i:02}' for i in range(self.num_agents)}
         # 反转字典：将字符串序号作为键，整数 ind 作为值
         self.reversed_indices = {v: k for k, v in self.unit_indices.items()}
 
@@ -41,7 +49,7 @@ class HDEnv(MultiAgentEnv):
         return self._get_obs(), {}
 
     def step(self, action):
-        red_obs = self.env.get_obs(side='red')
+        red_obs = self.sim.get_obs(side='red')
         red_cmd_dict = self.red_agent.step(red_obs)
 
         # 遍历red_cmd_dict中的每一个条目
@@ -59,9 +67,9 @@ class HDEnv(MultiAgentEnv):
                             # 如果没有control，按理说应该是不可能的
                             raise ValueError
                     # 如果action_value为1，则保留cmd的所有属性
-        self.env.send_commands(red_cmd_dict, cmd_side='red')
+        self.sim.send_commands(red_cmd_dict, cmd_side='red')
         
-        blue_obs = self.env.get_obs(side='blue')
+        blue_obs = self.sim.get_obs(side='blue')
         blue_cmd_dict = self.blue_agent.step(blue_obs)
 
         # 遍历red_cmd_dict中的每一个条目
@@ -79,13 +87,13 @@ class HDEnv(MultiAgentEnv):
                             # 如果没有control，按理说应该是不可能的
                             raise ValueError
                     # 如果action_value为1，则保留cmd的所有属性
-        self.env.send_commands(blue_cmd_dict, cmd_side='blue')
+        self.sim.send_commands(blue_cmd_dict, cmd_side='blue')
 
         # 开始处理gym接口的输出情况
-        self.env.step()
+        self.sim.step()
         obs = self._get_obs()
         rewards = {}
-        terminateds = {"__all__": self.env.done}
+        terminateds = {"__all__": self.sim.done}
 
         # 遍历红方智能体
         for i in range(6):  # 红方对应00-05
@@ -120,7 +128,7 @@ class HDEnv(MultiAgentEnv):
                 self.blue_previous_alive_num = blue_current_alive_num
 
         truncateds = dict(
-            {f'{i:02}': self.env.done for i in range(self.num_agents)}, **{"__all__": self.env.done}
+            {f'{i:02}': self.sim.done for i in range(self.num_agents)}, **{"__all__": self.sim.done}
             )
         return obs, rewards, terminateds, truncateds, {}
 
@@ -131,7 +139,7 @@ class HDEnv(MultiAgentEnv):
     def _get_obs(self):
         current_obs_dict = {}
 
-        red_obs_dict = self.env.get_obs(side='red')
+        red_obs_dict = self.sim.get_obs(side='red')
         for key,value in red_obs_dict.my_planes.items():
             if key in self.unit_indices:
                 obs_array = np.array([value.x * 0.0001,
@@ -140,7 +148,7 @@ class HDEnv(MultiAgentEnv):
                                     value.yaw * 1])
                 current_obs_dict[self.unit_indices[key]] = obs_array
             
-        blue_obs_dict = self.env.get_obs(side='blue')
+        blue_obs_dict = self.sim.get_obs(side='blue')
         for key,value in blue_obs_dict.my_planes.items():
             if key in self.unit_indices:
                 obs_array = np.array([value.x * 0.0001,
@@ -152,11 +160,7 @@ class HDEnv(MultiAgentEnv):
         return current_obs_dict
     
 if __name__ == "__main__":
-    with open("scen.json", "r") as fin:
-        scen = json.load(fin)
-
-    sim = HDDF2Sim(scen, use_tacview=False, save_replay=False, replay_path="replay.acmi")
-    env = HDEnv(sim)  # 类似open_spiel的游戏内核
+    env = HDEnv("defaults")  # 类似open_spiel的游戏内核
     obs = env.reset()
     done = {"__all__": False}
     step = 0
