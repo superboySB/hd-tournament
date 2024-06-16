@@ -314,8 +314,8 @@ if __name__ == "__main__":
             )
         )
         .resources(num_gpus=0)
-        .rollouts(num_rollout_workers = 2, num_envs_per_worker=2)
-        .training(num_sgd_iter=200)
+        .rollouts(num_rollout_workers = 32, num_envs_per_worker=16)
+        .training(num_sgd_iter=20)
         .multi_agent(
             # Initial policy map: All PPO. This will be expanded
             # to more policy snapshots. This is done in the
