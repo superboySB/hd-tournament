@@ -50,7 +50,7 @@ from ray.tune import register_env
 from ray.rllib.env.utils import try_import_pyspiel,try_import_open_spiel
 open_spiel = try_import_open_spiel(error=True)
 pyspiel = try_import_pyspiel(error=True)
-from my_open_spiel import OpenSpielEnv
+from open_spiel_env_wrappers import OpenSpielEnv
 from open_spiel.python.rl_environment import Environment  # noqa: E402
 
 
