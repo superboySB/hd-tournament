@@ -12,7 +12,7 @@
 为了尽量运行方便，需要在Windows机器的hdbisai环境扩充一些与服务器通信相关的库，
 ```sh
 D:\projects\hdbisai\python.exe -m pip install --upgrade pip --proxy="127.0.0.1:10809"
-D:\projects\hdbisai\python.exe -m pip install paramiko ray[rllib]==2.27.2 --proxy="127.0.0.1:10809"
+D:\projects\hdbisai\python.exe -m pip install paramiko ray[rllib]==2.7.2 --proxy="127.0.0.1:10809"
 ```
 注意有SSL的问题要先添加系统变量（如：`D:\projects\hdbisai\Library\bin`），代理开全局模式。
 

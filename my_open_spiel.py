@@ -112,3 +112,22 @@ class OpenSpielEnv(MultiAgentEnv):
             actions, probs = zip(*self.state.chance_outcomes())
             action = np.random.choice(actions, p=probs)
             self.state.apply_action(action)
+
+if __name__ == "__main__":
+    game = pyspiel.load_game("markov_soccer")
+    env = OpenSpielEnv(game)
+    obs = env.reset()
+    done = {"__all__": False}
+    step = 0
+    while not done["__all__"]:
+        actions = {agent: env.action_space.sample() for agent in range(env.num_agents)}
+        obs, rewards, terminateds, truncateds, info = env.step(actions)
+        print(f"Step: {step}")
+        print("Observations:", obs)
+        print("Rewards:", rewards)
+        done = terminateds
+        step += 1
+        env.render(mode='human')
+    print("Game over.")
+
+

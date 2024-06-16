@@ -2,7 +2,17 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python: Debug",
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${fileDirname}",
+            "purpose": ["debug-in-terminal"],
+            "pythonPath": "/home/ps/miniconda3/envs/hd/bin/python"
+        },
+        {
+            "name": "Python: Debug demo.py",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/demo.py",

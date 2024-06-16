@@ -313,7 +313,7 @@ if __name__ == "__main__":
                 win_rate_threshold=args.win_rate_threshold,
             )
         )
-        .resources(num_gpus=int(os.environ.get("RLLIB_NUM_GPUS", "0")))
+        .resources(num_gpus=1)
         .rollouts(num_rollout_workers = 32, num_envs_per_worker=5)
         .training(num_sgd_iter=200)
         .multi_agent(
