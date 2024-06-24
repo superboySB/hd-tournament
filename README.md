@@ -46,6 +46,11 @@ python demo_raw.py
 
 save_replay后得到的新的`replay.acmi`可以得到非实时的回放，那个时候可以拖动进度条，详细用法可以咨询李超
 
+## 测试李超demo
+```sh
+python demo_chao.py
+```
+
 ## 训练Pipeline
 环境接口定义与单步调试
 ```sh
