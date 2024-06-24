@@ -7,6 +7,7 @@ from agents.test_red.pid import FlyPid
 # 选手定义名为Agent的类， 
 # 1. 实现 初始化函数(__init__)， 
 # 2. 实现 每一帧读取处理态势并返回指令的函数（step)。
+
 target_info = 0
 class Agent:
     def __init__(self, side) -> None:
@@ -33,7 +34,7 @@ class Agent:
         """
         
         plane_pos = utils.Vector3(
-        plane.x, plane.y, plane.z
+            plane.x, plane.y, plane.z
         )
         target_pos = utils.Vector3(
             target.x, target.y, target.z
@@ -75,7 +76,7 @@ class Agent:
             action[1] = 0# 左转30度
             print("左转 30度", end=' ')
             
-        if target.tas - plane.tas > 10:# 加速
+        if target.tas - plane.tas > 10:# 加速跟随
             action[2] = 0
             print("加速", end=' ')
         elif target.tas - plane.tas < -10:# 尽量匀速
@@ -111,7 +112,7 @@ class Agent:
                     print("控制：", id)
                     self.cmd_id = id
                 if id == self.cmd_id:
-                    action = self.get_action_cmd(target_info, plane)
+                    action = self.get_action_cmd(target_info, plane)  # 替代了一个high-level来写规则了
                     cmd['control'] = utils.fly_with_alt_yaw_vel(plane, obs.sim_time, action, fly_pid=self.id_pidctl_dict[id], data_queue=data_queue)
                     print(f"{self.cmd_id} to {self.tar_id} action: {action}, cmd: {cmd['control']}, omega_r: {math.degrees(plane.omega_r)}")
                     

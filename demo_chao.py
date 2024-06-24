@@ -7,7 +7,7 @@ from hddf2sim.conf import default_conf
 # from agents.team_blue_raw.blue_agent_new import Agent as BlueAgent
 from agents.team_blue.blue_agent_demo import Agent as BlueAgent
 # from agents.team_blue.blue_agent_demo import Agent as RedAgent
-from agents.test_red.test_agent import Agent as RedAgent
+from agents.test_chao_pid.test_agent import Agent as RedAgent
 
 with open("scen.json", "r") as fin:
     scen = json.load(fin)
@@ -19,8 +19,6 @@ blue_agent = BlueAgent('blue')
 num_steps = 0
 
 while not sim.done:
-    if num_steps % 2 == 0:
-        sim.reset()
     cmds = []
     
     blue_obs = sim.get_obs(side='blue')

@@ -122,6 +122,7 @@ def fly_with_alt_yaw_vel(plane, sim_time, action:list, fly_pid:FlyPid, data_queu
     if data_queue != None:
         # 俯仰角
         data_queue.put((sim_time, np.degrees(plane.pitch), np.degrees(last_target_pitch), np.degrees(plane.roll), np.degrees(last_target_roll), cmd_list[0], cmd_list[1], 0, 0))
+    
     last_target_pitch = target_pitch
     last_target_heading = plane.yaw + math.radians(temp_turn)
     last_target_roll = target_roll
