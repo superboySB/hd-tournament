@@ -1,0 +1,1 @@
+基于OpenSpiel的类似gym接口制作的self play的demo，需要移动到主目录即可测试洪都。
