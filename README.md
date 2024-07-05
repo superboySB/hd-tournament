@@ -29,11 +29,8 @@ C:\ProgramData\Miniconda3\envs\hdbisai
 # 如果需要代理要用全局模式
 C:\ProgramData\Miniconda3\envs\hdbisai\python.exe -m pip install --upgrade pip --proxy=127.0.0.1:10809 
 
-# Windows基本很难装Open Spiel，但是在linux里面可以一步pip到位
-# C:\ProgramData\Miniconda3\envs\hdbisai\python.exe -m pip install paramiko open_spiel --proxy=127.0.0.1:10809
-
 # 目测py3.7能使用的最新版本也就是2.7.2
-C:\ProgramData\Miniconda3\envs\hdbisai\python.exe -m pip install --upgrade ray[rllib] --proxy=127.0.0.1:10809  
+C:\ProgramData\Miniconda3\envs\hdbisai\python.exe -m pip install -r requirements.txt --proxy=127.0.0.1:10809  
 ```
 
 ### 运行智能体对打的简单Demo
@@ -46,12 +43,13 @@ python demo_raw.py
 
 save_replay后得到的新的`replay.acmi`可以得到非实时的回放，那个时候可以拖动进度条，详细用法可以咨询李超
 
-## 测试李超demo
+## 训练Pipeline
+训练demo
 ```sh
-python demo_chao.py
+python -m psro.train 
 ```
 
-## 训练Pipeline
+## 训练Pipeline(即将弃用)
 环境接口定义与单步调试
 ```sh
 python env_wrappers.py
