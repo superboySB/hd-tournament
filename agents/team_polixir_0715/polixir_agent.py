@@ -14,7 +14,9 @@ class Agent(BaseAgent):
         self.num_step = 0
         self.history = {}
         self.previous_missile_ind = {}
+        self.previous_missile_positions = {}
         self.previous_controls = {}
+        self.pid_controller = PIDController()
 
     def step(self, obs):
         raw_cmd_dict =  super().step(obs)
@@ -36,7 +38,7 @@ class Agent(BaseAgent):
             (missile_info.y - plane_info.y) ** 2 +
             (missile_info.z - plane_info.z) ** 2
         )
-    
+
     def calculate_direction(self, plane_info, missile_info):
         dx = missile_info.x - plane_info.x
         dy = missile_info.y - plane_info.y
@@ -46,22 +48,39 @@ class Agent(BaseAgent):
         elevation = math.atan2(dz, horizontal_distance)
         return azimuth, elevation
 
+    def estimate_missile_velocity(self, missile_info, key):
+        if key in self.previous_missile_positions:
+            prev_x, prev_y, prev_z = self.previous_missile_positions[key]
+            dt = 1 / 20.0  # 每个step的间隔是1/20秒
+            v_x = (missile_info.x - prev_x) / dt
+            v_y = (missile_info.y - prev_y) / dt
+            v_z = (missile_info.z - prev_z) / dt
+        else:
+            v_x, v_y, v_z = 0, 0, 0
+        self.previous_missile_positions[key] = (missile_info.x, missile_info.y, missile_info.z)
+        return v_x, v_y, v_z
+
+    def predict_missile_position(self, missile_info, v_x, v_y, v_z, steps_ahead=10):
+        predicted_x = missile_info.x + v_x * steps_ahead * (1 / 20.0)
+        predicted_y = missile_info.y + v_y * steps_ahead * (1 / 20.0)
+        predicted_z = missile_info.z + v_z * steps_ahead * (1 / 20.0)
+        return predicted_x, predicted_y, predicted_z
+
     def calculate_control(self, plane_info, missile_info, azimuth, elevation, key):
-        # 计算需要调整的控制量
         target_heading = math.degrees(azimuth)
         target_pitch = math.degrees(elevation)
 
-        # 计算飞机需要旋转的角度
         current_heading = plane_info.yaw
-        heading_diff = target_heading - current_heading
+        current_pitch = plane_info.pitch
 
-        # 简化版的控制策略
-        aileron = math.sin(math.radians(heading_diff))
-        elevator = -math.sin(math.radians(target_pitch))
-        rudder = aileron  # 简单起见，假设偏航控制和横滚控制一致
-        throttle = 1  # 全速前进
+        heading_diff = (target_heading - current_heading + 180) % 360 - 180
+        pitch_diff = target_pitch - current_pitch
 
-        # 平滑过渡
+        aileron = self.pid_controller.update(heading_diff, key, 'aileron')
+        elevator = self.pid_controller.update(pitch_diff, key, 'elevator')
+        rudder = aileron
+        throttle = 1.0
+
         prev_aileron, prev_elevator, prev_rudder, prev_throttle = self.previous_controls.get(key, [0, 0, 0, 1])
         smooth_factor = 0.1
         aileron = prev_aileron * (1 - smooth_factor) + aileron * smooth_factor
@@ -69,12 +88,12 @@ class Agent(BaseAgent):
         rudder = prev_rudder * (1 - smooth_factor) + rudder * smooth_factor
         throttle = prev_throttle * (1 - smooth_factor) + throttle * smooth_factor
 
-        # 保存当前控制值作为下次平滑过渡的参考
         self.previous_controls[key] = [aileron, elevator, rudder, throttle]
 
         return [aileron, elevator, rudder, throttle]
 
     def control_jiehu(self, obs, raw_cmd_dict):
+        my_plane_id_list = list(obs.my_planes.keys())
         enemy_plane_id_list = list(obs.enemy_planes.keys())
 
         if not enemy_plane_id_list:
@@ -99,7 +118,9 @@ class Agent(BaseAgent):
                 if key in self.previous_missile_ind and self.previous_missile_ind[key] != closest_missile.ind:
                     self.history[key] = []
                 self.previous_missile_ind[key] = closest_missile.ind
-                
+
+                v_x, v_y, v_z = self.estimate_missile_velocity(closest_missile, key)
+                predicted_x, predicted_y, predicted_z = self.predict_missile_position(closest_missile, v_x, v_y, v_z)
                 azimuth, elevation = self.calculate_direction(my_plane_info, closest_missile)
                 control = self.calculate_control(my_plane_info, closest_missile, azimuth, elevation, key)
                 value['control'] = control  # 覆盖原有的控制指令
@@ -113,7 +134,7 @@ class Agent(BaseAgent):
 
                 if self.num_step % 10 == 0:
                     print(f"Step: {self.num_step}")
-                    print(f"Plane ID: {key}, My plane coordinates: (x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z})")
+                    print(f"Plane ID: {key}, My plane coordinates: (x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, yaw: {my_plane_info.yaw}, v_north: {my_plane_info.v_north}, v_east: {my_plane_info.v_east}, v_down: {my_plane_info.v_down})")
                     print(f"Closest missile ind: {closest_missile.ind}, Coordinates: (x: {closest_missile.x}, y: {closest_missile.y}, z: {closest_missile.z})")
                     print(f"Control: aileron={control[0]}, elevator={control[1]}, rudder={control[2]}, throttle={control[3]}")
 
@@ -122,9 +143,30 @@ class Agent(BaseAgent):
     # 目前比较简单，就是晚一点发弹，一开始避免对喷
     def weapon_jiehu(self, obs, raw_cmd_dict):
         enemy_plane_id_list = list(obs.enemy_planes.keys())
-        
+
         for key, value in raw_cmd_dict.items():
             if 'weapon' in value and self.num_step < 5000:
                 del value['weapon']
         
         return raw_cmd_dict
+
+
+class PIDController:
+    def __init__(self, kp=0.1, ki=0.01, kd=0.05):
+        self.kp = kp
+        self.ki = ki
+        self.kd = kd
+        self.integral = {}
+        self.previous_error = {}
+
+    def update(self, error, key, control_type):
+        if key not in self.integral:
+            self.integral[key] = {}
+        if key not in self.previous_error:
+            self.previous_error[key] = {}
+
+        self.integral[key][control_type] = self.integral[key].get(control_type, 0) + error
+        derivative = error - self.previous_error[key].get(control_type, 0)
+        self.previous_error[key][control_type] = error
+
+        return self.kp * error + self.ki * self.integral[key][control_type] + self.kd * derivative
