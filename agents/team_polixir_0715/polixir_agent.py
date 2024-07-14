@@ -14,6 +14,7 @@ class Agent(BaseAgent):
         self.num_step = 0
         self.history = {}
         self.previous_missile_ind = {}
+        self.previous_controls = {}
 
     def step(self, obs):
         raw_cmd_dict =  super().step(obs)
@@ -24,7 +25,7 @@ class Agent(BaseAgent):
         new_cmd_dict = self.control_jiehu(obs, raw_cmd_dict)
 
         # 发弹截胡策略：
-        # TODO：应该追着对面屁股后面发弹，越靠近中轴命中概率越大，只要不是100%，就妥妥的纯概率事件
+        # TODO：应该追着对面屁股后面发弹，越靠近中轴命中概率越大，只要不是100%，还是妥妥的纯概率事件
         new_cmd_dict = self.weapon_jiehu(obs, new_cmd_dict)
         
         return new_cmd_dict
@@ -35,7 +36,7 @@ class Agent(BaseAgent):
             (missile_info.y - plane_info.y) ** 2 +
             (missile_info.z - plane_info.z) ** 2
         )
-
+    
     def calculate_direction(self, plane_info, missile_info):
         dx = missile_info.x - plane_info.x
         dy = missile_info.y - plane_info.y
@@ -45,7 +46,7 @@ class Agent(BaseAgent):
         elevation = math.atan2(dz, horizontal_distance)
         return azimuth, elevation
 
-    def calculate_control(self, plane_info, missile_info, azimuth, elevation):
+    def calculate_control(self, plane_info, missile_info, azimuth, elevation, key):
         # 计算需要调整的控制量
         target_heading = math.degrees(azimuth)
         target_pitch = math.degrees(elevation)
@@ -60,10 +61,20 @@ class Agent(BaseAgent):
         rudder = aileron  # 简单起见，假设偏航控制和横滚控制一致
         throttle = 1  # 全速前进
 
+        # 平滑过渡
+        prev_aileron, prev_elevator, prev_rudder, prev_throttle = self.previous_controls.get(key, [0, 0, 0, 1])
+        smooth_factor = 0.1
+        aileron = prev_aileron * (1 - smooth_factor) + aileron * smooth_factor
+        elevator = prev_elevator * (1 - smooth_factor) + elevator * smooth_factor
+        rudder = prev_rudder * (1 - smooth_factor) + rudder * smooth_factor
+        throttle = prev_throttle * (1 - smooth_factor) + throttle * smooth_factor
+
+        # 保存当前控制值作为下次平滑过渡的参考
+        self.previous_controls[key] = [aileron, elevator, rudder, throttle]
+
         return [aileron, elevator, rudder, throttle]
 
     def control_jiehu(self, obs, raw_cmd_dict):
-        my_plane_id_list = list(obs.my_planes.keys())
         enemy_plane_id_list = list(obs.enemy_planes.keys())
 
         if not enemy_plane_id_list:
@@ -90,7 +101,7 @@ class Agent(BaseAgent):
                 self.previous_missile_ind[key] = closest_missile.ind
                 
                 azimuth, elevation = self.calculate_direction(my_plane_info, closest_missile)
-                control = self.calculate_control(my_plane_info, closest_missile, azimuth, elevation)
+                control = self.calculate_control(my_plane_info, closest_missile, azimuth, elevation, key)
                 value['control'] = control  # 覆盖原有的控制指令
 
                 self.history.setdefault(key, []).append({
@@ -101,6 +112,7 @@ class Agent(BaseAgent):
                 })
 
                 if self.num_step % 10 == 0:
+                    print(f"Step: {self.num_step}")
                     print(f"Plane ID: {key}, My plane coordinates: (x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z})")
                     print(f"Closest missile ind: {closest_missile.ind}, Coordinates: (x: {closest_missile.x}, y: {closest_missile.y}, z: {closest_missile.z})")
                     print(f"Control: aileron={control[0]}, elevator={control[1]}, rudder={control[2]}, throttle={control[3]}")
@@ -109,6 +121,8 @@ class Agent(BaseAgent):
 
     # 目前比较简单，就是晚一点发弹，一开始避免对喷
     def weapon_jiehu(self, obs, raw_cmd_dict):
+        enemy_plane_id_list = list(obs.enemy_planes.keys())
+        
         for key, value in raw_cmd_dict.items():
             if 'weapon' in value and self.num_step < 5000:
                 del value['weapon']
