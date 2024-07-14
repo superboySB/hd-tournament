@@ -81,6 +81,12 @@ class Agent(BaseAgent):
         rudder = aileron
         throttle = 1.0
 
+        # Limit the control values to the range [-1, 1] for aileron, elevator, and rudder; [0, 1] for throttle
+        aileron = max(min(aileron, 1), -1)
+        elevator = max(min(elevator, 1), -1)
+        rudder = max(min(rudder, 1), -1)
+        throttle = max(min(throttle, 1), 0)
+
         prev_aileron, prev_elevator, prev_rudder, prev_throttle = self.previous_controls.get(key, [0, 0, 0, 1])
         smooth_factor = 0.1
         aileron = prev_aileron * (1 - smooth_factor) + aileron * smooth_factor
@@ -116,7 +122,7 @@ class Agent(BaseAgent):
 
             if closest_missile:
                 if key in self.previous_missile_ind and self.previous_missile_ind[key] != closest_missile.ind:
-                    self.history[key] = []
+                    self.pid_controller.reset(key)  # Reset PID when missile ind changes
                 self.previous_missile_ind[key] = closest_missile.ind
 
                 v_x, v_y, v_z = self.estimate_missile_velocity(closest_missile, key)
@@ -138,6 +144,9 @@ class Agent(BaseAgent):
                     print(f"Closest missile ind: {closest_missile.ind}, Coordinates: (x: {closest_missile.x}, y: {closest_missile.y}, z: {closest_missile.z})")
                     print(f"Control: aileron={control[0]}, elevator={control[1]}, rudder={control[2]}, throttle={control[3]}")
 
+            else:
+                self.pid_controller.reset(key)  # Reset PID when no missile detected
+
         return raw_cmd_dict  # 返回覆盖后的字典
 
     # 目前比较简单，就是晚一点发弹，一开始避免对喷
@@ -145,14 +154,14 @@ class Agent(BaseAgent):
         enemy_plane_id_list = list(obs.enemy_planes.keys())
 
         for key, value in raw_cmd_dict.items():
-            if 'weapon' in value and self.num_step < 5000:
+            if 'weapon' in value and self.num_step < 3000:
                 del value['weapon']
         
         return raw_cmd_dict
 
 
 class PIDController:
-    def __init__(self, kp=0.1, ki=0.01, kd=0.05):
+    def __init__(self, kp=0.05, ki=0.01, kd=0.02):
         self.kp = kp
         self.ki = ki
         self.kd = kd
@@ -170,3 +179,9 @@ class PIDController:
         self.previous_error[key][control_type] = error
 
         return self.kp * error + self.ki * self.integral[key][control_type] + self.kd * derivative
+
+    def reset(self, key):
+        if key in self.integral:
+            self.integral[key] = {}
+        if key in self.previous_error:
+            self.previous_error[key] = {}
