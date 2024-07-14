@@ -1,0 +1,26 @@
+{
+    "start_time": 0.0,
+    "end_time": 600.0,
+    "units": [
+        {
+            "side":"red",
+            "type":"fighter",
+            "is_uav": false,
+            "x":2e3,
+            "y":15e3,
+            "height":9e3,
+            "yaw": 1.73,
+            "loadout":{"mid_missile":2,"short_missile":2}
+        },
+        {
+            "side":"blue", 
+            "type":"fighter",
+            "is_uav": false,
+            "x":-2e3, 
+            "y":-15e3, 
+            "height":8e3,
+            "yaw": 1.73,
+            "loadout":{"mid_missile":2,"short_missile":2}
+        }
+    ]
+}

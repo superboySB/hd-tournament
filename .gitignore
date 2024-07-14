@@ -2,7 +2,7 @@
 # Temporary configuration files
 /*.yaml
 /*.yml
-/*.json
+# /*.json
 
 # RLlib results
 /results
