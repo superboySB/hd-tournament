@@ -1,4 +1,3 @@
-import numpy as np
 import math
 from sturnus.geo import *
 from .blue_agent_demo import Agent as BaseAgent
