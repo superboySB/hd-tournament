@@ -54,5 +54,10 @@ python open_spiel_env_wrappers.py
 python open_spiel_self_play_demo.py
 ```
 
+## 编译pyd
+```sh
+python setup.py build_ext --inplace
+```
+
 ## 关于Tacview的快捷键用法
 [![image.png](https://i.postimg.cc/mg1C4h6G/image.png)](https://postimg.cc/pmxpYVH0)
