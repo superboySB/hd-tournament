@@ -55,6 +55,7 @@ python open_spiel_self_play_demo.py
 ```
 
 ## 编译pyd
+搞一个同名的agent.pyx文件，然后我们尝试在最外面编辑setup.py进行封装，运行下面的代码。
 ```sh
 python setup.py build_ext --inplace
 ```
