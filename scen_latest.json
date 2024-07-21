@@ -6,20 +6,20 @@
             "side":"red",
             "type":"fighter",
             "is_uav": false,
-            "x":-2e3,
-            "y":20e3,
-            "height":9e3,
-            "yaw": 0,
-            "pitch": 0,
-            "roll":0,
+            "x":2e3,
+            "y":-10e3,
+            "height":6e3,
+            "yaw": 1.73,
             "loadout":{"mid_missile":2,"short_missile":2}
         },
         {
             "side":"blue", 
             "type":"fighter",
             "is_uav": false,
-            "x":-8e3, "y":-45e3, "height":8e3,
-            "yaw": 0.7,
+            "x":2e3, 
+            "y":45e3, 
+            "height":10e3,
+            "yaw": 1.73,
             "loadout":{"mid_missile":2,"short_missile":2}
         }
     ]
