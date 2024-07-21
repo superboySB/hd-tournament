@@ -13,7 +13,6 @@ class Agent():
         self.num_step = 0
         self.history = {}
         self.previous_controls = {}
-        self.pid_controller = PIDController(kp=0.01, ki=0.005, kd=0.001)
 
     def step(self, obs):
         self.num_step += 1
@@ -43,33 +42,31 @@ class Agent():
         target_heading = math.degrees(azimuth)
         target_pitch = math.degrees(elevation)
 
-        current_heading = plane_info.yaw
+        current_heading = math.degrees(plane_info.yaw)
         current_pitch = plane_info.pitch
 
         heading_diff = (target_heading - current_heading + 180) % 360 - 180
         pitch_diff = target_pitch - current_pitch
 
-        aileron = self.pid_controller.update(heading_diff, key, 'aileron')
-        elevator = self.pid_controller.update(pitch_diff, key, 'elevator')
-        rudder = aileron
+        if abs(heading_diff) > 5:  # 定义急转弯阶段
+            aileron = -1.0 if heading_diff < 0 else 1.0
+            elevator = -1.0 if pitch_diff < 0 else 1.0
+            stage = "急转弯阶段"
+        elif abs(heading_diff) > 0:  # 过渡阶段
+            aileron = -0.5 if heading_diff < 0 else 0.5
+            elevator = -0.5 if pitch_diff < 0 else 0.5
+            stage = "过渡阶段"
+        else:  # 定义稳定飞行阶段
+            aileron = -0.3 if heading_diff < 0 else 0.3 if heading_diff > 0 else 0.0
+            elevator = -0.3 if pitch_diff < 0 else 0.3 if pitch_diff > 0 else 0.0
+            stage = "稳定飞行阶段"
+
+        rudder = 0.0  # 始终为0
         throttle = 0.7
 
-        # 动态调整控制量
-        aileron = max(min(aileron, 0.3), -0.3)
-        elevator = max(min(elevator, 0.5), -0.5)
-        rudder = max(min(rudder, 0.3), -0.3)
-        throttle = max(min(throttle, 1), 0)
+        self.previous_controls[key] = [aileron, elevator, rudder, throttle, stage, heading_diff, pitch_diff]
 
-        prev_aileron, prev_elevator, prev_rudder, prev_throttle = self.previous_controls.get(key, [0, 0, 0, 0.7])
-        smooth_factor = 0.2
-        aileron = prev_aileron * (1 - smooth_factor) + aileron * smooth_factor
-        elevator = prev_elevator * (1 - smooth_factor) + elevator * smooth_factor
-        rudder = prev_rudder * (1 - smooth_factor) + rudder * smooth_factor
-        throttle = prev_throttle * (1 - smooth_factor) + throttle * smooth_factor
-
-        self.previous_controls[key] = [aileron, elevator, rudder, throttle]
-
-        return [aileron, elevator, rudder, throttle]
+        return [aileron, elevator, rudder, throttle, stage, heading_diff, pitch_diff]
 
     def control_requ(self, obs):
         heat_zone_center = (0, 0)
@@ -98,39 +95,16 @@ class Agent():
 
             control = self.calculate_control(my_plane_info, target_info, azimuth, elevation, key)
             
-            this_plane_control = {'control': control}
+            this_plane_control = {'control': control[:4]}
             raw_cmd_dict[key] = this_plane_control
 
             # 打印调试信息
-            if self.num_step % 10 == 0:
+            if self.num_step % 10 == 0 or self.num_step == 1:
                 print(f"Step: {self.num_step}")
                 print(f"Plane ID: {key}, My plane coordinates: (x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, yaw: {my_plane_info.yaw}, v_north: {my_plane_info.v_north}, v_east: {my_plane_info.v_east}, v_down: {my_plane_info.v_down})")
-                print(f"Control: aileron={control[0]}, elevator={control[1]}, rudder={control[2]}, throttle={control[3]}")
+                print(f"Target coordinates: (x: {target_info.x}, y: {target_info.y}, z: {target_info.z})")
+                print(f"Azimuth: {azimuth}, Elevation: {elevation}")
+                print(f"Heading diff: {control[5]}, Pitch diff: {control[6]}")
+                print(f"Control: aileron={control[0]}, elevator={control[1]}, rudder={control[2]}, throttle={control[3]}, stage={control[4]}")
 
         return raw_cmd_dict
-
-class PIDController:
-    def __init__(self, kp=0.01, ki=0.005, kd=0.001):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
-        self.integral = {}
-        self.previous_error = {}
-
-    def update(self, error, key, control_type):
-        if key not in self.integral:
-            self.integral[key] = {}
-        if key not in self.previous_error:
-            self.previous_error[key] = {}
-
-        self.integral[key][control_type] = self.integral[key].get(control_type, 0) + error
-        derivative = error - self.previous_error[key].get(control_type, 0)
-        self.previous_error[key][control_type] = error
-
-        return self.kp * error + self.ki * self.integral[key][control_type] + self.kd * derivative
-
-    def reset(self, key):
-        if key in self.integral:
-            self.integral[key] = {}
-        if key in self.previous_error:
-            self.previous_error[key] = {}
