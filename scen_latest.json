@@ -5,22 +5,22 @@
         {
             "side":"red",
             "type":"fighter",
-            "is_uav": false,
+            "is_uav": true,
             "x":2e3,
-            "y":-10e3,
-            "height":6e3,
+            "y":40e3,
+            "height":14e3,
             "yaw": 1.73,
-            "loadout":{"mid_missile":2,"short_missile":2}
+            "loadout":{"mid_missile":0,"short_missile":0}
         },
         {
             "side":"blue", 
             "type":"fighter",
-            "is_uav": false,
+            "is_uav": true,
             "x":2e3, 
-            "y":45e3, 
-            "height":10e3,
-            "yaw": 1.73,
-            "loadout":{"mid_missile":2,"short_missile":2}
+            "y":-45e3, 
+            "height":8e3,
+            "yaw": -1.73,
+            "loadout":{"mid_missile":0,"short_missile":0}
         }
     ]
 }
