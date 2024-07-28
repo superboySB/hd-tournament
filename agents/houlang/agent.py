@@ -3,19 +3,18 @@ import numpy as np
 from sturnus.geo import *
 
 def normalize_angle(angle):
-    """ 将角度归一化到 [-π, π] 区间。"""
+    """将角度归一化到 [-π, π] 区间。"""
     return (angle + math.pi) % (2 * math.pi) - math.pi
 
-class Agent():
+class Agent:
     def __init__(self, side) -> None:
         self.num_step = 0
+        self.previous_yaw = None  # 初始化前一个yaw值
 
     def step(self, obs):
         self.num_step += 1
-
         # 控制逻辑
         raw_cmd_dict = self.control_requ(obs)
-        
         return raw_cmd_dict
 
     def calculate_distance(self, plane_info, target_info):
@@ -31,18 +30,26 @@ class Agent():
         dz = target_info.z - plane_info.z
         horizontal_distance = math.sqrt(dx ** 2 + dy ** 2)
         azimuth = math.atan2(dy, dx)
+
+        # 当前偏航角
+        current_yaw = plane_info.yaw
+        if self.previous_yaw is not None:
+            # 检测跳变
+            yaw_diff = abs(current_yaw - self.previous_yaw)
+            if yaw_diff > math.pi - 0.1:  # 使用稍小于π的阈值以确保是跳变
+                yaw_adjustment = math.pi if current_yaw < 0 else -math.pi
+                current_yaw += yaw_adjustment
+
+        self.previous_yaw = current_yaw  # 更新前一个偏航角
+
         elevation = math.atan2(dz, horizontal_distance)
 
         if debug:
             print(f"\ndx: {dx}, dy: {dy}, dz: {dz}")
             print(f"horizontal_distance: {horizontal_distance}")
-            print(f"Calculated azimuth (before normalization): {azimuth}, Current yaw: {plane_info.yaw}")
+            print(f"Calculated azimuth (before normalization): {azimuth}, Current yaw: {current_yaw}")
 
-        # 规范化所有角度
-        azimuth = normalize_angle(azimuth)
-        current_yaw = normalize_angle(plane_info.yaw)
-
-        # 计算角度差，并且再次规范化，以确保是最短路径的差异
+        # 计算方位角差
         azimuth_diff = normalize_angle(azimuth - current_yaw)
 
         if debug:
@@ -67,7 +74,7 @@ class Agent():
             altitude_error = z_target - my_plane_info.z
             elevation_correction = np.clip(altitude_error / 100, -1, 1)
 
-            aileron = np.clip(azimuth / 30, -1, 1)
+            aileron = np.clip(azimuth/5, -1, 1)
             elevator = np.clip(elevation_correction, -0.7, 0.7)
 
             if distance_to_target > heat_zone_radius:
