@@ -61,7 +61,7 @@ class Agent:
     def control_requ(self, obs, debug=True):
         heat_zone_center = (0, 0)
         heat_zone_radius = 15000
-        z_target = 0
+        z_target = 2000
         raw_cmd_dict = {}
 
         for key, value in obs.my_planes.items():
@@ -71,16 +71,23 @@ class Agent:
             azimuth, elevation = self.calculate_direction(my_plane_info, target_info)
             distance_to_target = self.calculate_distance(my_plane_info, target_info)
             aileron = np.clip(azimuth, -1, 1)
-            elevation = np.clip(elevation, -1, 1)
+            elevation = np.clip(elevation*5, -1, 1)
             
+            rudder = 0.0
+
             if distance_to_target > heat_zone_radius:
                 flight_phase = "Approach"
-                rudder = 0.0
             else:
                 flight_phase = "Circling"
-                rudder = np.clip(azimuth / 50, -1, 1)
 
-            throttle = 0.7
+            if my_plane_info.v_down > 30:
+                throttle = 0
+                elevation = -1
+            elif my_plane_info.v_down < -30:
+                throttle = 0
+                elevation = 1
+            else:
+                throttle = 0.8
 
             this_plane_control = {'control': [aileron, elevation, rudder, throttle]}
             raw_cmd_dict[key] = this_plane_control
@@ -88,7 +95,7 @@ class Agent:
             if self.num_step % 10 == 0 and debug:
                 distance_to_center = self.calculate_distance(my_plane_info, type('target', (object,), {'x': 0, 'y': 0, 'z': 0}))
                 print(f"\nStep: {self.num_step}, ID: {key}, Flight Phase: {flight_phase}, Distance to Heat Zone Center: {distance_to_center:.2f}")
-                print(f"Plane ID: {key}, My plane coordinates: (x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, \
+                print(f"My plane coordinates: (x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, \
                     roll: {my_plane_info.roll}, pitch: {my_plane_info.pitch}, yaw: {my_plane_info.yaw}, \
                         v_north: {my_plane_info.v_north}, v_east: {my_plane_info.v_east}, v_down: {my_plane_info.v_down}, \
                             omega_p: {my_plane_info.omega_p}, omega_q: {my_plane_info.omega_q}, omega_r: {my_plane_info.omega_r}")
