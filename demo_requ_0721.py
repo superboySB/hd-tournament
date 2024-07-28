@@ -27,15 +27,16 @@ while not sim.done:
     blue_cmd_dict = blue_agent.step(blue_obs)
     cmds.extend(blue_cmd_dict)
 
-    # print(f"\nStep {num_step}")
-    # for key, value in blue_obs.my_planes.items():
-    #     my_plane_info = value
-    #     print(f"[State] x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, \
-    #           roll: {my_plane_info.roll}, pitch: {my_plane_info.pitch}, yaw: {my_plane_info.yaw}, \
-    #           v_down: {my_plane_info.v_down}, v_east: {my_plane_info.v_east}, v_north: {my_plane_info.v_north}")
-    # for key, value in blue_cmd_dict.items():
-    #     my_plane_action = value
-    #     print(f"[aileron, elevator, rudder, throttle] {my_plane_action['control']}")
+    # if num_step % 10 == 0:
+    #     print(f"\nStep {num_step}")
+    #     for key, value in blue_obs.my_planes.items():
+    #         my_plane_info = value
+    #         print(f"[State] x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, \
+    #             roll: {my_plane_info.roll}, pitch: {my_plane_info.pitch}, yaw: {my_plane_info.yaw}, \
+    #             v_down: {my_plane_info.v_down}, v_east: {my_plane_info.v_east}, v_north: {my_plane_info.v_north}")
+    #     for key, value in blue_cmd_dict.items():
+    #         my_plane_action = value
+    #         print(f"[aileron, elevator, rudder, throttle] {my_plane_action['control']}")
     
     sim.send_commands(blue_cmd_dict, cmd_side='blue')
     sim.step()

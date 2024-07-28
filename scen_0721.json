@@ -16,7 +16,7 @@
             "side":"blue",
             "type":"fighter",
             "is_uav": true,
-            "x":-6e3, "y":45e3, "height":12e3,
+            "x":8e3, "y":45e3, "height":12e3,
             "yaw": -1.573,
             "loadout":{"mid_missile":0,"short_missile":0}
         }
