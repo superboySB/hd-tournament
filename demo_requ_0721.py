@@ -22,17 +22,21 @@ while not sim.done:
     cmds = []
     red_obs = sim.get_obs(side='red')
     red_cmd_dict = red_agent.step(red_obs)
-
-    # for key, value in red_obs.my_planes.items():
-    #     if num_step % 10 == 0:
-    #         print(f"Step: {num_step}")
-    #         print(f"Plane ID: {key}, My plane coordinates: (x: {value.x}, y: {value.y}, z: {value.z}, yaw: {value.yaw}, v_north: {value.v_north}, v_east: {value.v_east}, v_down: {value.v_down})")
-    #         print(f"Control: aileron={red_cmd_dict[key]['control'][0]}, elevator={red_cmd_dict[key]['control'][1]}, rudder={red_cmd_dict[key]['control'][2]}, throttle={red_cmd_dict[key]['control'][3]}")
-
     sim.send_commands(red_cmd_dict, cmd_side='red')
     blue_obs = sim.get_obs(side='blue')
     blue_cmd_dict = blue_agent.step(blue_obs)
     cmds.extend(blue_cmd_dict)
+
+    # print(f"\nStep {num_step}")
+    # for key, value in blue_obs.my_planes.items():
+    #     my_plane_info = value
+    #     print(f"[State] x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, \
+    #           roll: {my_plane_info.roll}, pitch: {my_plane_info.pitch}, yaw: {my_plane_info.yaw}, \
+    #           v_down: {my_plane_info.v_down}, v_east: {my_plane_info.v_east}, v_north: {my_plane_info.v_north}")
+    # for key, value in blue_cmd_dict.items():
+    #     my_plane_action = value
+    #     print(f"[aileron, elevator, rudder, throttle] {my_plane_action['control']}")
+    
     sim.send_commands(blue_cmd_dict, cmd_side='blue')
     sim.step()
 input("单局推演结束，按Enter退出。")

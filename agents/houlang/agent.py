@@ -41,39 +41,38 @@ class Agent():
     def control_requ(self, obs):
         heat_zone_center = (0, 0)
         heat_zone_radius = 15000
-        z_min, z_max = -2000, 0  # 调整至更接近高空
+        z_target = 0  # 目标高度
         raw_cmd_dict = {}
 
         for key, value in obs.my_planes.items():
             my_plane_info = value
-            target_info = type('target', (object,), {'x': heat_zone_center[0], 'y': heat_zone_center[1], 'z': z_max})
+            target_info = type('target', (object,), {'x': heat_zone_center[0], 'y': heat_zone_center[1], 'z': z_target})
 
             azimuth, elevation = self.calculate_direction(my_plane_info, target_info)
             distance_to_target = self.calculate_distance(my_plane_info, target_info)
 
-            # 确定舵机和节流阀的控制
             if distance_to_target > heat_zone_radius:
                 # 飞向热区阶段
-                aileron = 1.0 if azimuth < 0 else -1.0  # 根据方向调整
-                elevator = 1.0 if elevation < 0 else -1.0
-                throttle = 1.0  # 最大节流
-                rudder = 0.0  # 始终为0
+                flight_phase = "Approach"
+                aileron = np.sign(azimuth) * 0.3  # 根据方位角调整副翼
+                elevator = -np.sign(elevation) * 0.1  # 根据仰角调整升降舵
             else:
                 # 盘旋阶段
+                flight_phase = "Circling"
                 aileron = -0.5 if azimuth < 0 else 0.5  # 小幅调整以维持盘旋
                 elevator = -0.5 if elevation < 0 else 0.5
-                throttle = 0.5  # 减少速度以维持盘旋
-                rudder = 0.0  # 始终为0
 
+            throttle = 0.7  # 始终维持较高的速度
+            rudder = 0.0  # 始终为0
             this_plane_control = {'control': [aileron, elevator, rudder, throttle]}
             raw_cmd_dict[key] = this_plane_control
 
-            # 打印调试信息
-            if self.num_step % 10 == 0 or self.num_step == 1:
-                print(f"Step: {self.num_step}")
+            if self.num_step % 20 == 0:
+                distance_to_center = self.calculate_distance(my_plane_info, type('target', (object,), {'x': 0, 'y': 0, 'z': 0}))
+                print(f"Step: {self.num_step}, Flight Phase: {flight_phase}, Distance to Heat Zone Center: {distance_to_center:.2f}")
                 print(f"Plane ID: {key}, My plane coordinates: (x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, yaw: {my_plane_info.yaw}, v_north: {my_plane_info.v_north}, v_east: {my_plane_info.v_east}, v_down: {my_plane_info.v_down})")
                 print(f"Target coordinates: (x: {target_info.x}, y: {target_info.y}, z: {target_info.z})")
-                print(f"Azimuth: {azimuth}, Elevation: {elevation}")
+                print(f"Azimuth: {azimuth:.2f}, Elevation: {elevation:.2f}")
                 print(f"Control: aileron={aileron}, elevator={elevator}, rudder={rudder}, throttle={throttle}")
 
         return raw_cmd_dict
