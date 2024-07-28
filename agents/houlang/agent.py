@@ -68,13 +68,13 @@ class Agent:
             my_plane_info = value
             target_info = type('target', (object,), {'x': heat_zone_center[0], 'y': heat_zone_center[1], 'z': z_target})
 
-            azimuth, elevation = self.calculate_direction(my_plane_info, target_info)
+            azimuth, elevation = self.calculate_direction(my_plane_info, target_info,debug=True)
             distance_to_target = self.calculate_distance(my_plane_info, target_info)
 
             altitude_error = z_target - my_plane_info.z
             elevation_correction = np.clip(altitude_error / 100, -1, 1)
-
-            aileron = np.clip(azimuth/5, -1, 1)
+            
+            aileron = np.clip(azimuth, -1, 1)
             elevator = np.clip(elevation_correction, -0.7, 0.7)
 
             if distance_to_target > heat_zone_radius:
@@ -88,15 +88,15 @@ class Agent:
             this_plane_control = {'control': [aileron, elevator, rudder, throttle]}
             raw_cmd_dict[key] = this_plane_control
 
-            # if self.num_step % 20 == 0:
-            #     distance_to_center = self.calculate_distance(my_plane_info, type('target', (object,), {'x': 0, 'y': 0, 'z': 0}))
-            #     print(f"\nStep: {self.num_step}, Flight Phase: {flight_phase}, Distance to Heat Zone Center: {distance_to_center:.2f}")
-            #     print(f"Plane ID: {key}, My plane coordinates: (x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, \
-            #         roll: {my_plane_info.roll}, pitch: {my_plane_info.pitch}, yaw: {my_plane_info.yaw}, \
-            #             v_north: {my_plane_info.v_north}, v_east: {my_plane_info.v_east}, v_down: {my_plane_info.v_down})")
-            #     print(f"Target coordinates: (x: {target_info.x}, y: {target_info.y}, z: {target_info.z})")
-            #     print(f"Azimuth: {azimuth:.2f}, Elevation: {elevation:.2f}")
-            #     print(f"Control: aileron={aileron}, elevator={elevator}, rudder={rudder}, throttle={throttle}")
+            if self.num_step % 1 == 0:
+                distance_to_center = self.calculate_distance(my_plane_info, type('target', (object,), {'x': 0, 'y': 0, 'z': 0}))
+                print(f"\nStep: {self.num_step}, Flight Phase: {flight_phase}, Distance to Heat Zone Center: {distance_to_center:.2f}")
+                print(f"Plane ID: {key}, My plane coordinates: (x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, \
+                    roll: {my_plane_info.roll}, pitch: {my_plane_info.pitch}, yaw: {my_plane_info.yaw}, \
+                        v_north: {my_plane_info.v_north}, v_east: {my_plane_info.v_east}, v_down: {my_plane_info.v_down})")
+                print(f"Target coordinates: (x: {target_info.x}, y: {target_info.y}, z: {target_info.z})")
+                print(f"Azimuth: {azimuth:.2f}, Elevation: {elevation:.2f}")
+                print(f"Control: aileron={aileron}, elevator={elevator}, rudder={rudder}, throttle={throttle}")
 
         return raw_cmd_dict
 
