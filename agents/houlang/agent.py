@@ -11,7 +11,7 @@ class Agent:
         self.num_step = 0
         self.previous_yaw = None  # 初始化前一个yaw值
         self.waypoints = self.generate_waypoints(n_points=100, radius=10000)
-        self.requ_center = [0, 0,-1000]
+        self.requ_center = [0, 0,-2000]
         self.current_target_index = None
 
     def generate_waypoints(self, n_points, radius):
@@ -22,10 +22,6 @@ class Agent:
     def find_farthest_waypoint_of_myplane(self, my_plane_info):
         distances = [np.sqrt((w[0] - my_plane_info.x) ** 2 + (w[1] - my_plane_info.y) ** 2) for w in self.waypoints]
         return np.argmin(distances)
-
-    def find_farthest_waypoint_of_index(self, current_index):
-        distances = [np.sqrt((self.waypoints[current_index][0] - w[0]) ** 2 + (self.waypoints[current_index][1] - w[1]) ** 2) for w in self.waypoints]
-        return np.argmax(distances)
     
     def step(self, obs):
         self.num_step += 1
@@ -85,32 +81,40 @@ class Agent:
                 flight_phase = "Approach"
                 distance_to_target = distance_to_requ_center
                 target_info = type('target', (object,), {'x': self.requ_center[0], 'y': self.requ_center[1], 'z': self.requ_center[2]})
+
+                azimuth, elevation = self.calculate_direction(my_plane_info, target_info)
+                aileron = np.clip(azimuth, -1, 1)
+                elevation = np.clip(elevation*3, -1, 1)
+                rudder = 0.0
+                throttle = 1.0
+
+                if my_plane_info.v_down > 30:
+                    elevation = -1
+                elif my_plane_info.v_down < -30:
+                    throttle = 0.2
+                    elevation = 1
+
             else:
+                # TODO：绕圈仍然不够理想
                 flight_phase = "Circling"
                 if self.current_target_index is None:
                     self.current_target_index = self.find_farthest_waypoint_of_myplane(my_plane_info)
                 else:
                     distance_to_target = self.calculate_distance(my_plane_info, [self.waypoints[self.current_target_index][0], 
                                                                                  self.waypoints[self.current_target_index][1]])
-                    if distance_to_target < 5000:
-                        self.current_target_index = self.find_farthest_waypoint_of_index(self.current_target_index)
+                    if distance_to_target < 3000:
+                        self.current_target_index = self.find_farthest_waypoint_of_myplane(my_plane_info)
 
                 target_info = type('target', (object,), {'x': self.waypoints[self.current_target_index][0], 
                                                          'y': self.waypoints[self.current_target_index][1], 
                                                          'z': self.waypoints[self.current_target_index][2]})
 
-            azimuth, elevation = self.calculate_direction(my_plane_info, target_info)
-            aileron = np.clip(azimuth, -1, 1)
-            elevation = np.clip(elevation*3, -1, 1)
-            rudder = 0.0
-            throttle = 1.0
+                azimuth, elevation = self.calculate_direction(my_plane_info, target_info)
 
-            if my_plane_info.v_down > 20:
-                throttle = 0.1
-                elevation = -1
-            elif my_plane_info.v_down < -20:
-                throttle = 0.1
-                elevation = 1
+                aileron = 0
+                elevation = -0.5
+                rudder = 0.0
+                throttle = 1
 
             this_plane_control = {'control': [aileron, elevation, rudder, throttle]}
             raw_cmd_dict[key] = this_plane_control
