@@ -14,7 +14,7 @@ C:\ProgramData\Miniconda3\envs\hdbisai\Scripts
 C:\ProgramData\Miniconda3\envs\hdbisai\Library\bin
 C:\ProgramData\Miniconda3\envs\hdbisai
 ```
-现在的系统本机python命令默认为比赛方环境了。为了尽量单机调试方便，需要在Windows机器的原有hdbisai环境扩充一些与ray训练、服务器通信相关的库。(下面暂时是为了开发方便，后续建议还是要考虑官方测试阶段，可能不允许装依赖的情况)
+现在的系统本机python命令默认为比赛方环境了。为了尽量单机调试方便，需要在Windows机器的原有hdbisai环境扩充一些与ray训练、服务器通信相关的库。(下面暂时是为了开发方便，后续在官方测试阶段，暂时不允许装依赖，应该默认就是要用`requirements_raw.txt`)
 ```sh
 # 如果需要代理要用全局模式
 C:\ProgramData\Miniconda3\envs\hdbisai\python.exe -m pip install --upgrade pip --proxy=127.0.0.1:10809 
@@ -33,32 +33,27 @@ python demo_raw.py
 
 save_replay后得到的新的`replay.acmi`可以得到非实时的回放，那个时候可以拖动进度条，详细用法可以咨询李超
 
-## 训练Pipeline
-训练demo
+## 提交代码记录
+提交代码要求编译pyd，并且不要留有任何打印的调试信息。
+
+### 版本0715
+基于洪都黑盒专家系统，外加节省导弹、用脸贴弹
 ```sh
-python -m psro.train 
+python demo_jiehu_0715.py
 ```
 
-## 训练Pipeline(即将弃用)
-环境接口定义与单步调试
+### 版本0721
+尝试一上来抵近热区，然后做大范围机动
 ```sh
-python env_wrappers.py
-```
-基于上述接口实现，先跑通一个分布式自博弈+联盟训练
-```sh
-python self_play_on_windows.py
-```
-上述demo还存在一些运行问题、环境设计等问题，还是要深挖rllib提供的[主要参考](https://github.com/ray-project/ray/blob/ray-2.7.1/rllib/examples/self_play_league_based_with_open_spiel.py)去进一步研究,不过研究open_spiel这个demo的时候建议用linux，然后pip装一下就可以，比较方便。
-```sh
-python open_spiel_env_wrappers.py
-python open_spiel_self_play_demo.py
+python demo_requ_0721.py
 ```
 
-## 编译pyd
+## Tips
+### 编译pyd
 搞一个同名的agent.pyx文件，然后我们尝试在最外面编辑`setup.py`进行封装，运行下面的代码。
 ```sh
 python setup.py build_ext --inplace
 ```
 
-## 关于Tacview的快捷键用法
+### 关于Tacview的快捷键用法
 [![image.png](https://i.postimg.cc/mg1C4h6G/image.png)](https://postimg.cc/pmxpYVH0)

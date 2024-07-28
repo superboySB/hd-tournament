@@ -8,7 +8,7 @@ from agents.team_blue.blue_agent_demo import Agent as BlueAgent
 # from agents.team_blue.blue_agent_demo import Agent as RedAgent
 from agents.houlang.agent import Agent as RedAgent
 
-with open("scen_latest.json", "r") as fin:
+with open("scen_0721.json", "r") as fin:
     scen = json.load(fin)
 
 sim = HDDF2Sim(scen, use_tacview=True, save_replay=True, replay_path="replay.acmi")
