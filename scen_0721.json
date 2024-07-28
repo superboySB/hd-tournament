@@ -9,7 +9,7 @@
             "x":2e3,
             "y":40e3,
             "height":14e3,
-            "yaw": 1.73,
+            "yaw": -1.73,
             "loadout":{"mid_missile":0,"short_missile":0}
         },
         {
@@ -19,7 +19,7 @@
             "x":2e3, 
             "y":-45e3, 
             "height":8e3,
-            "yaw": -1.73,
+            "yaw": 1.73,
             "loadout":{"mid_missile":0,"short_missile":0}
         }
     ]

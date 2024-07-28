@@ -4,7 +4,7 @@
 ## 配置说明
 ### 依赖
 - [TacView](https://www.tacview.net/download/latest/en/)软件提供可视化，专业版可以提供实时单步调试，免费版可以使用回放
-- 运行测试的时候应该推荐用官方提供的Python环境hdbisai（解压[压缩包](https://superboysb-my.sharepoint.cn/:u:/g/personal/admin_superboysb_partner_onmschina_cn/EfA3s4y1CLZPg_--J3d5tOsBT112TyhezIcbC2N6W9JMmw?e=SYPKtG)大小为3G左右，然后因为它是一个conda环境，需要放到`C:\ProgramData\Miniconda3\envs\`这个目录下骗一下它有conda。
+- 运行测试的时候应该推荐用官方提供的Python环境hdbisai（解压大小为3G左右），然后因为它是一个conda环境，需要放到`C:\ProgramData\Miniconda3\envs\`这个目录下骗一下它有conda。
 - 鉴于仿真只能windows（本机ip：172.16.0.213），运行训练用的机器可以先用部门服务器(ubuntu@172.16.12.210)或算力池
 
 ### Windows环境准备（功能：单机调试+比赛测试）
