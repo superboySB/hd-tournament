@@ -92,7 +92,7 @@ class Agent:
                 else:
                     distance_to_target = self.calculate_distance(my_plane_info, [self.waypoints[self.current_target_index][0], 
                                                                                  self.waypoints[self.current_target_index][1]])
-                    if distance_to_target < 1000:
+                    if distance_to_target < 5000:
                         self.current_target_index = self.find_farthest_waypoint_of_index(self.current_target_index)
 
                 target_info = type('target', (object,), {'x': self.waypoints[self.current_target_index][0], 
@@ -105,13 +105,10 @@ class Agent:
             rudder = 0.0
             throttle = 1.0
 
-            if aileron > 0.7 or aileron < -0.7:
-                throttle = 0.1
-
-            if my_plane_info.v_down > 30:
+            if my_plane_info.v_down > 20:
                 throttle = 0.1
                 elevation = -1
-            elif my_plane_info.v_down < -30:
+            elif my_plane_info.v_down < -20:
                 throttle = 0.1
                 elevation = 1
 
