@@ -20,8 +20,7 @@ class Agent:
     def calculate_distance(self, plane_info, target_info):
         return math.sqrt(
             (target_info.x - plane_info.x) ** 2 +
-            (target_info.y - plane_info.y) ** 2 +
-            (target_info.z - plane_info.z) ** 2
+            (target_info.y - plane_info.y) ** 2
         )
 
     def calculate_direction(self, plane_info, target_info, debug=False):
@@ -61,7 +60,7 @@ class Agent:
     def control_requ(self, obs, debug=True):
         heat_zone_center = (0, 0)
         heat_zone_radius = 15000
-        z_target = 2000
+        z_target = -2000
         raw_cmd_dict = {}
 
         for key, value in obs.my_planes.items():
@@ -71,7 +70,7 @@ class Agent:
             azimuth, elevation = self.calculate_direction(my_plane_info, target_info)
             distance_to_target = self.calculate_distance(my_plane_info, target_info)
             aileron = np.clip(azimuth, -1, 1)
-            elevation = np.clip(elevation*5, -1, 1)
+            elevation = np.clip(elevation*3, -1, 1)
             
             rudder = 0.0
 
@@ -81,13 +80,13 @@ class Agent:
                 flight_phase = "Circling"
 
             if my_plane_info.v_down > 30:
-                throttle = 0
+                throttle = 0.1
                 elevation = -1
             elif my_plane_info.v_down < -30:
-                throttle = 0
+                throttle = 0.1
                 elevation = 1
             else:
-                throttle = 0.8
+                throttle = 1.0
 
             this_plane_control = {'control': [aileron, elevation, rudder, throttle]}
             raw_cmd_dict[key] = this_plane_control
