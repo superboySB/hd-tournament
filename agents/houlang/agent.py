@@ -66,27 +66,25 @@ class Agent:
         for key, value in obs.my_planes.items():
             my_plane_info = value
             target_info = type('target', (object,), {'x': heat_zone_center[0], 'y': heat_zone_center[1], 'z': z_target})
-
-            azimuth, elevation = self.calculate_direction(my_plane_info, target_info)
             distance_to_target = self.calculate_distance(my_plane_info, target_info)
-            aileron = np.clip(azimuth, -1, 1)
-            elevation = np.clip(elevation*3, -1, 1)
-            
-            rudder = 0.0
+            azimuth, elevation = self.calculate_direction(my_plane_info, target_info)
 
             if distance_to_target > heat_zone_radius:
                 flight_phase = "Approach"
+                aileron = np.clip(azimuth, -1, 1)
+                elevation = np.clip(elevation*3, -1, 1)
+                rudder = 0.0
+                if my_plane_info.v_down > 30:
+                    throttle = 0.1
+                    elevation = -1
+                elif my_plane_info.v_down < -30:
+                    throttle = 0.1
+                    elevation = 1
+                else:
+                    throttle = 1.0
             else:
                 flight_phase = "Circling"
-
-            if my_plane_info.v_down > 30:
-                throttle = 0.1
-                elevation = -1
-            elif my_plane_info.v_down < -30:
-                throttle = 0.1
-                elevation = 1
-            else:
-                throttle = 1.0
+                aileron, elevation, rudder, throttle = 0, 0, 0, 0.7
 
             this_plane_control = {'control': [aileron, elevation, rudder, throttle]}
             raw_cmd_dict[key] = this_plane_control
