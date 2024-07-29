@@ -1,4 +1,0 @@
-李超的PID代码，相应文件移动到主目录和对应的agents文件夹即可测试洪都
-```sh
-python demo_chao.py 
-```

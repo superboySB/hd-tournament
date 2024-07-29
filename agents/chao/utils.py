@@ -1,7 +1,7 @@
 import math
 import numpy as np
 from sturnus.geo import *
-from agents.test_red.pid import FlyPid
+from .pid import FlyPid
 
 # def get_turn_delta(plane_value, target_value):
 #     temp_value = target_value - plane_value

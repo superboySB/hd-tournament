@@ -1,9 +1,8 @@
 import numpy as np
 import math
-import agents.test_red.pid as pid
-import agents.test_red.utils as utils
 from sturnus.geo import *
-from agents.test_red.pid import FlyPid
+from .pid import FlyPid
+from .utils import Vector3, degrees_limit, fly_with_alt_yaw_vel
 # 选手定义名为Agent的类， 
 # 1. 实现 初始化函数(__init__)， 
 # 2. 实现 每一帧读取处理态势并返回指令的函数（step)。
@@ -33,10 +32,10 @@ class Agent:
             list: [delta_alt, delta_yaw(角度), delta_vel]
         """
         
-        plane_pos = utils.Vector3(
+        plane_pos = Vector3(
             plane.x, plane.y, plane.z
         )
-        target_pos = utils.Vector3(
+        target_pos = Vector3(
             target.x, target.y, target.z
         )
         action = np.zeros(3, dtype=int)
@@ -52,7 +51,7 @@ class Agent:
         
         to_target_vec = target_pos - plane_pos
         target_yaw = np.arctan2(to_target_vec.y, to_target_vec.x)
-        delta_yaw = utils.degrees_limit(math.degrees(target_yaw - plane.yaw))
+        delta_yaw = degrees_limit(math.degrees(target_yaw - plane.yaw))
         
         if delta_yaw > 30:# 右转 30度
             action[1] = 6
@@ -113,7 +112,7 @@ class Agent:
                     self.cmd_id = id
                 if id == self.cmd_id:
                     action = self.get_action_cmd(target_info, plane)  # 替代了一个high-level来写规则了
-                    cmd['control'] = utils.fly_with_alt_yaw_vel(plane, obs.sim_time, action, fly_pid=self.id_pidctl_dict[id], data_queue=data_queue)
+                    cmd['control'] = fly_with_alt_yaw_vel(plane, obs.sim_time, action, fly_pid=self.id_pidctl_dict[id], data_queue=data_queue)
                     print(f"{self.cmd_id} to {self.tar_id} action: {action}, cmd: {cmd['control']}, omega_r: {math.degrees(plane.omega_r)}")
                     
                     cmd_dict[id] = cmd

@@ -112,7 +112,7 @@ class Agent:
                 azimuth, elevation = self.calculate_direction(my_plane_info, target_info)
 
                 aileron = 0
-                elevation = -0.5
+                elevation = -1
                 rudder = 0.0
                 throttle = 1
 
