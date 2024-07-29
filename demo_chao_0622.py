@@ -7,7 +7,7 @@ from hddf2sim.conf import default_conf
 # from agents.team_blue_raw.blue_agent_new import Agent as BlueAgent
 from agents.team_blue.blue_agent_demo import Agent as BlueAgent
 # from agents.team_blue.blue_agent_demo import Agent as RedAgent
-from agents.chao.agent_follow import Agent as RedAgent
+from agents.chao.agent_position_control import Agent as RedAgent
 
 with open("scen_0715.json", "r") as fin:
     scen = json.load(fin)
@@ -29,7 +29,7 @@ while not sim.done:
 
     red_obs = sim.get_obs(side='red')
     # print(red_obs.my_planes)
-    red_cmd_dict = red_agent.step(red_obs,blue_obs)
+    red_cmd_dict = red_agent.step(red_obs)
     # print(red_cmd_dict)
     sim.send_commands(red_cmd_dict, cmd_side='red')
 

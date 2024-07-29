@@ -14,7 +14,7 @@ norm_delta_altitude = np.array([500, 0, -500])
 norm_delta_heading = np.array([-np.pi / 6, -np.pi / 12, -np.pi / 36, 0, np.pi / 36, np.pi / 12, np.pi / 6])
 norm_delta_velocity = np.array([0.05, 0, -0.05])
 
-def fly_with_alt_yaw_vel(plane, sim_time, action:list, fly_pid:FlyPid, data_queue=None):
+def fly_with_alt_yaw_vel(plane, action:list, fly_pid:FlyPid):
     """_summary_
 
     Args:
@@ -56,12 +56,6 @@ def fly_with_alt_yaw_vel(plane, sim_time, action:list, fly_pid:FlyPid, data_queu
     # 飞机倒过来飞时特殊处理，俯仰轴取反方向
     if -90 >= math.degrees(plane.roll) or math.degrees(plane.roll) >= 90:
         cmd_list[1] = -1 * cmd_list[1]
-        
-    # 输出画图数据
-    # 时间，真实俯仰，目标俯仰，真实航向，目标航向
-    if data_queue != None:
-        # 俯仰角
-        data_queue.put((sim_time, np.degrees(plane.pitch), np.degrees(last_target_pitch), np.degrees(plane.roll), np.degrees(last_target_roll), cmd_list[0], cmd_list[1], 0, 0))
     
     last_target_pitch = target_pitch
     last_target_heading = plane.yaw + math.radians(temp_turn)
@@ -167,9 +161,9 @@ class Agent:
             
         return action
     
-    def step(self, obs, blue_obs, data_queue=None):
+    def step(self, obs, blue_obs):
         cmd_dict = {}
-        global target_point, target_info
+        global target_info
         self.run_counts += 1
         # 获取此步长的地方信息
         for id, tar_plane in blue_obs.my_planes.items():
@@ -192,7 +186,7 @@ class Agent:
                     self.cmd_id = id
                 if id == self.cmd_id:
                     action = self.get_action_cmd(target_info, plane)  # 替代了一个high-level来写规则了
-                    cmd['control'] = fly_with_alt_yaw_vel(plane, obs.sim_time, action, fly_pid=self.id_pidctl_dict[id], data_queue=data_queue)
+                    cmd['control'] = fly_with_alt_yaw_vel(plane, action, fly_pid=self.id_pidctl_dict[id])
                     print(f"{self.cmd_id} to {self.tar_id} action: {action}, cmd: {cmd['control']}, omega_r: {math.degrees(plane.omega_r)}")
                     
                     cmd_dict[id] = cmd
