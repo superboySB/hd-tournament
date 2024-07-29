@@ -20,7 +20,7 @@ class Agent:
         self.phase = 1  # 1 for approach, 2 for circling
         self.heat_zone_center = Vector3(0, 0, -3000)
         self.heat_zone_radius = 15000
-        self.farthest_index = None
+        self.control_position_index = None
         self.generate_waypoints()  # 初始化路径点
 
     def generate_waypoints(self):
@@ -36,8 +36,15 @@ class Agent:
                 max_distance = distance
                 farthest_index = i
         return farthest_index
-
-    def get_action_cmd(self, target, plane):
+    
+    def calculate_distance(self, plane_info, missile_info):
+        return math.sqrt(
+            (missile_info.x - plane_info.x) ** 2 +
+            (missile_info.y - plane_info.y) ** 2 +
+            (missile_info.z - plane_info.z) ** 2
+        )
+    
+    def get_action_cmd(self, target, plane, follow_plane=False):
         """_summary_
 
         Args:
@@ -90,26 +97,28 @@ class Agent:
             action[1] = 0# 左转30度
             print("左转 30度", end=' ')
         
-        action[2] = 0
-
-        # if target.tas - plane.tas > 10:# 加速跟随
-        #     action[2] = 0
-        #     print("加速", end=' ')
-        # elif target.tas - plane.tas < -10:# 尽量匀速
-        #     action[2] = 2
-        #     print("减速", end=' ')
-        # else:
-        #     action[2] = 1# 减速
-        #     print("匀速", end=' ')
+        if follow_plane:
+            if target.tas - plane.tas > 10:
+                action[2] = 0
+                print("加速", end=' ')
+            elif target.tas - plane.tas < -10:
+                action[2] = 2
+                print("减速", end=' ')
+            else:
+                action[2] = 1
+                print("匀速", end=' ')
+        else:
+            action[2] = 0
+            print("匀速", end=' ')
             
         return action
 
     def step(self, obs):
         cmd_dict = {}
-        for id, plane in obs.my_planes.items():
-            plane_pos = Vector3(plane.x, plane.y, plane.z)
-            if not self.ini_pid or id not in self.id_pidctl_dict:
-                self.id_pidctl_dict[id] = FlyPid()
+        for my_id, my_plane in obs.my_planes.items():
+            plane_pos = Vector3(my_plane.x, my_plane.y, my_plane.z)
+            if not self.ini_pid or my_id not in self.id_pidctl_dict:
+                self.id_pidctl_dict[my_id] = FlyPid()
 
             if self.phase == 1:
                 distance_to_center = plane_pos.distance(self.heat_zone_center)
@@ -120,18 +129,39 @@ class Agent:
             if self.phase == 1:
                 target_pos = self.heat_zone_center
             else:
-                if self.farthest_index is None:
-                    self.farthest_index = self.find_farthest_waypoint(plane_pos)
-                else:
-                    if plane_pos.distance(self.waypoints[self.farthest_index])<5000:
-                        self.farthest_index = self.find_farthest_waypoint(plane_pos)
-                target_pos = self.waypoints[self.farthest_index]
+                # 情况1：初始化
+                if self.control_position_index is None:
+                    self.control_position_index = self.find_farthest_waypoint(plane_pos)
+                    target_pos = self.waypoints[self.control_position_index]
+                
+                # 情况2： 发现导弹
+                # TODO：关于导弹信息
+                closest_missile = None
+                for entity_info in obs.rws_infos:
+                    if entity_info.ind in enemy_plane_id_list:
+                        continue
 
-            action = self.get_action_cmd(target_pos, plane)
-            cmd = {'control': fly_with_alt_yaw_vel(plane, action, self.id_pidctl_dict[id])}
-            cmd_dict[id] = cmd
+                    if my_id in entity_info.alarm_ind_list:
+                        distance = self.calculate_distance(my_plane, entity_info)
+                        if distance < min_distance:
+                            min_distance = distance
+                            closest_missile = entity_info
+                
+                # 情况3：发现敌机
+                # TODO：关于敌机信息
+                enemy_plane_id_list = list(obs.enemy_planes.keys())
 
-            print("Step: ",self.run_counts,", ID: ", id, ", 位置：", [plane.x,plane.y,plane.z], "目标：", [target_pos.x,target_pos.y,target_pos.z],"控制:", cmd["control"])
+                
+                # 情况4：继续占领热区
+                if plane_pos.distance(self.waypoints[self.control_position_index])<3000:
+                    self.control_position_index = self.find_farthest_waypoint(plane_pos)
+                    target_pos = self.waypoints[self.control_position_index]                
+
+            action = self.get_action_cmd(target_pos, my_plane)
+            cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
+            cmd_dict[my_id] = cmd
+
+            print("Step: ",self.run_counts,", ID: ", my_id, ", 位置：", [my_plane.x,my_plane.y,my_plane.z], "目标：", [target_pos.x,target_pos.y,target_pos.z],"控制:", cmd["control"])
 
         self.run_counts += 1
         return cmd_dict
@@ -185,9 +215,9 @@ def fly_with_alt_yaw_vel(plane, action:list, fly_pid:FlyPid):
     cmd_list = fly_pid.get_control_cmd(plane.omega_p, plane.omega_q, plane.omega_r)
     
     # 控制加力来改变速度
-    if norm_delta_altitude[action[2]] < 0:
+    if norm_delta_velocity[action[2]] < 0:
         cmd_list[3] = 0
-    elif norm_delta_altitude[action[2]] == 0:
+    elif norm_delta_velocity[action[2]] == 0:
         cmd_list[3] = 0.395 # 匀速
         
     # 限制控制俯仰轴的指令值，防止飞机失控
