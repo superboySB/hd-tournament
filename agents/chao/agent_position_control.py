@@ -88,13 +88,13 @@ class Agent:
             if id not in self.id_pidctl_dict:
                 self.id_pidctl_dict[id] = FlyPid()
             
-            print("ID: ", id, "位置：", [plane.x,plane.y,plane.z], "目标：", target_coordinates)
-
             action = self.get_action_cmd(target_pos, plane)
             cmd = {
                 'control': fly_with_alt_yaw_vel(plane, action, self.id_pidctl_dict[id])
             }
             cmd_dict[id] = cmd
+
+            print("ID: ", id, "位置：", [plane.x,plane.y,plane.z], "目标：", target_coordinates, "控制:", cmd["control"])
         return cmd_dict
 
 def fly_with_alt_yaw_vel(plane, action:list, fly_pid:FlyPid):
