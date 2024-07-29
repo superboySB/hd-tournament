@@ -1,44 +1,41 @@
 import json
 import numpy as np
+
 from hddf2sim.hddf2sim import HDDF2Sim
 from hddf2sim.conf import default_conf
 
+# from agents.team_blue_raw.blue_agent_new import Agent as BlueAgent
 from agents.team_blue.blue_agent_demo import Agent as BlueAgent
-# from agents.houlang.agent import Agent as BlueAgent
-
 # from agents.team_blue.blue_agent_demo import Agent as RedAgent
-from agents.houlang.agent import Agent as RedAgent
+from agents.chao.agent_position_control import Agent as RedAgent
 
 with open("scen_0721.json", "r") as fin:
     scen = json.load(fin)
 
-sim = HDDF2Sim(scen, use_tacview=True, save_replay=True, replay_path="replay.acmi")
+sim = HDDF2Sim(scen, use_tacview=True, save_replay=False, replay_path="replay.acmi")
 sim.reset()
 red_agent = RedAgent('red')
 blue_agent = BlueAgent('blue')
-num_step = 0
+num_steps = 0
 
 while not sim.done:
-    num_step += 1 
     cmds = []
-    red_obs = sim.get_obs(side='red')
-    red_cmd_dict = red_agent.step(red_obs)
-    sim.send_commands(red_cmd_dict, cmd_side='red')
+    
     blue_obs = sim.get_obs(side='blue')
     blue_cmd_dict = blue_agent.step(blue_obs)
     cmds.extend(blue_cmd_dict)
-
-    # if num_step % 10 == 0:
-    #     print(f"\nStep {num_step}")
-    #     for key, value in blue_obs.my_planes.items():
-    #         my_plane_info = value
-    #         print(f"[State] x: {my_plane_info.x}, y: {my_plane_info.y}, z: {my_plane_info.z}, \
-    #             roll: {my_plane_info.roll}, pitch: {my_plane_info.pitch}, yaw: {my_plane_info.yaw}, \
-    #             v_down: {my_plane_info.v_down}, v_east: {my_plane_info.v_east}, v_north: {my_plane_info.v_north}")
-    #     for key, value in blue_cmd_dict.items():
-    #         my_plane_action = value
-    #         print(f"[aileron, elevator, rudder, throttle] {my_plane_action['control']}")
-    
+    # print(blue_cmd_dict)
     sim.send_commands(blue_cmd_dict, cmd_side='blue')
+
+    red_obs = sim.get_obs(side='red')
+    # print(red_obs.my_planes)
+    red_cmd_dict = red_agent.step(red_obs)
+    # print(red_cmd_dict)
+    sim.send_commands(red_cmd_dict, cmd_side='red')
+
+
     sim.step()
+    num_steps+=1
+
+print(f"环境一共执行了{num_steps}步")
 input("单局推演结束，按Enter退出。")
