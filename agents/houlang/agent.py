@@ -21,7 +21,7 @@ class Agent:
         self.heat_zone_radius = 15000
         self.current_enemy_plane_id_list = []
         self.missile_tracks = {}  # 记录每个导弹的轨迹
-        self.last_climb = True  # 标记最后一次高度调整方向
+        self.expired_missiles = set()  # 存储过时的导弹 ID
     
     def calculate_distance(self, plane_info, missile_info):
         return math.sqrt(
@@ -64,22 +64,6 @@ class Agent:
 
         if mode == "missile":
             action[0] = 1
-            # # 高度调整逻辑
-            # if plane.z > 5000:
-            #     action[0] = 0  # 上升
-            #     self.last_climb = True
-            #     print("升高", end=' ')
-            # elif plane.z < -3000:
-            #     action[0] = 2  # 下降
-            #     self.last_climb = False
-            #     print("降高", end=' ')
-            # else:
-            #     if self.last_climb:
-            #         action[0] = 0  # 上升
-            #         print("升高", end=' ')
-            #     else:
-            #         action[0] = 2  # 下降
-            #         print("降高", end=' ')
         else:
             if target.z - plane.z < -500:# 升高
                 action[0] = 0
@@ -154,7 +138,7 @@ class Agent:
             min_distance = 100e4
             self.phase = 1
             for entity_info in obs.rws_infos:
-                if entity_info.ind in self.current_enemy_plane_id_list:
+                if entity_info.ind in self.current_enemy_plane_id_list or entity_info.ind in self.expired_missiles:
                     continue
                 if my_id in entity_info.alarm_ind_list:
                     distance = self.calculate_distance(my_plane, entity_info)
@@ -164,7 +148,16 @@ class Agent:
                         if entity_info.ind not in self.missile_tracks:
                             self.missile_tracks[entity_info.ind] = []
                         self.missile_tracks[entity_info.ind].append(Vector3(entity_info.x, entity_info.y, entity_info.z))
-            if min_distance < 25000:
+
+                        # 判断导弹是否过时
+                        if len(self.missile_tracks[entity_info.ind]) > 2:
+                            prev_distance = self.calculate_distance(my_plane, self.missile_tracks[entity_info.ind][-2])
+                            if distance > prev_distance:
+                                self.expired_missiles.add(entity_info.ind)
+                                print(f"导弹 {entity_info.ind} 已过时")
+                                continue
+
+            if min_distance < 25000 and closest_missile:
                 self.phase = 2
                 
             if self.phase == 1:
