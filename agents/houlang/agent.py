@@ -15,12 +15,13 @@ class Agent:
         self.side = side
         self.id_pidctl_dict = {}
         self.ini_pid = False
-        self.waypoints = []
         self.run_counts = 0
         self.phase = 1  # 1 for approach, 2 for circling
         self.heat_zone_center = Vector3(0, 0, -3000)
         self.heat_zone_radius = 15000
         self.current_enemy_plane_id_list = []
+        self.missile_tracks = {}  # 记录每个导弹的轨迹
+        self.last_climb = True  # 标记最后一次高度调整方向
     
     def calculate_distance(self, plane_info, missile_info):
         return math.sqrt(
@@ -29,13 +30,26 @@ class Agent:
             (missile_info.z - plane_info.z) ** 2
         )
     
+    def estimate_missile_direction(self, missile_id, plane_pos):
+        """通过导弹的轨迹估计导弹的朝向"""
+        positions = self.missile_tracks[missile_id]
+        if len(positions) > 1:
+            dx = positions[-1].x - positions[-2].x
+            dy = positions[-1].y - positions[-2].y
+            dz = positions[-1].z - positions[-2].z
+        else:
+            dx = plane_pos.x - positions[-1].x
+            dy = plane_pos.y - positions[-1].y
+            dz = plane_pos.z - positions[-1].z
+        return Vector3(dx, dy, dz)
+    
     def get_action_cmd(self, target, plane, mode="fix_point"):
         """_summary_
 
         Args:
             target (list/myplaneinfo): 目标信息
             plane (myplaneinfo): 自身信息 
-            mode (str): fix_point / plane
+            mode (str): fix_point / plane / missile
         Returns:
             list: [delta_alt, delta_yaw(角度), delta_vel]
         """
@@ -47,19 +61,45 @@ class Agent:
             target.x, target.y, target.z
         )
         action = np.zeros(3, dtype=int)
-        if target.z - plane.z < -500:# 升高
-            action[0] = 0
-            print("升高", end=' ')
-        elif target.z - plane.z > 500:# 降高
-            action[0] = 2
-            print("降高", end=' ')
+
+        if mode == "missile":
+            action[0] = 1
+            # # 高度调整逻辑
+            # if plane.z > 5000:
+            #     action[0] = 0  # 上升
+            #     self.last_climb = True
+            #     print("升高", end=' ')
+            # elif plane.z < -3000:
+            #     action[0] = 2  # 下降
+            #     self.last_climb = False
+            #     print("降高", end=' ')
+            # else:
+            #     if self.last_climb:
+            #         action[0] = 0  # 上升
+            #         print("升高", end=' ')
+            #     else:
+            #         action[0] = 2  # 下降
+            #         print("降高", end=' ')
         else:
-            action[0] = 1# 保持
-            print("保持", end=' ')
-        
-        to_target_vec = target_pos - plane_pos
-        target_yaw = np.arctan2(to_target_vec.y, to_target_vec.x)
-        delta_yaw = degrees_limit(math.degrees(target_yaw - plane.yaw))
+            if target.z - plane.z < -500:# 升高
+                action[0] = 0
+                print("升高", end=' ')
+            elif target.z - plane.z > 500:# 降高
+                action[0] = 2
+                print("降高", end=' ')
+            else:
+                action[0] = 1# 保持
+                print("保持", end=' ')
+
+        # --------------------------------------------------------------------
+        if mode == "missile":
+            missile_dir = self.estimate_missile_direction(target.ind, plane_pos)
+            target_yaw = np.arctan2(missile_dir.y, missile_dir.x)
+            delta_yaw = degrees_limit(math.degrees(target_yaw + 180 - plane.yaw))
+        else:
+            to_target_vec = target_pos - plane_pos
+            target_yaw = np.arctan2(to_target_vec.y, to_target_vec.x)
+            delta_yaw = degrees_limit(math.degrees(target_yaw - plane.yaw))
         
         if delta_yaw > 30:# 右转 30度
             action[1] = 6
@@ -82,7 +122,8 @@ class Agent:
         else:
             action[1] = 0# 左转30度
             print("左转 30度", end=' ')
-        
+
+        # --------------------------------------------------------------------
         if mode == "plane":
             if target.tas - plane.tas > 10:
                 action[2] = 0
@@ -95,7 +136,7 @@ class Agent:
                 print("匀速", end=' ')
         else:
             action[2] = 0
-            print("匀速", end=' ')
+            print("加速", end=' ')
             
         return action
 
@@ -120,10 +161,12 @@ class Agent:
                     if distance < min_distance:
                         min_distance = distance
                         closest_missile = entity_info
-            if min_distance < 20000:
+                        if entity_info.ind not in self.missile_tracks:
+                            self.missile_tracks[entity_info.ind] = []
+                        self.missile_tracks[entity_info.ind].append(Vector3(entity_info.x, entity_info.y, entity_info.z))
+            if min_distance < 25000:
                 self.phase = 2
                 
-            # 情况2：占领热区
             if self.phase == 1:
                 print("占领热区", end=' ')
                 target_pos = self.heat_zone_center
@@ -131,7 +174,7 @@ class Agent:
             elif self.phase == 2:
                 print("躲避missile!!!", end=' ')
                 target_pos = Vector3(closest_missile.x, closest_missile.y, closest_missile.z)
-                action = [1,6,2]
+                action = self.get_action_cmd(closest_missile, my_plane, "missile")
             else:
                 raise NotImplementedError
                 
