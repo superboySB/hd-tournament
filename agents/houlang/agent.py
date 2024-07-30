@@ -20,22 +20,7 @@ class Agent:
         self.phase = 1  # 1 for approach, 2 for circling
         self.heat_zone_center = Vector3(0, 0, -3000)
         self.heat_zone_radius = 15000
-        self.control_position_index = None
-        self.generate_waypoints()  # 初始化路径点
-
-    def generate_waypoints(self):
-        angles = np.linspace(0, 2 * np.pi, 100, endpoint=False)
-        self.waypoints = [Vector3(self.heat_zone_center.x + 5000 * np.cos(angle), self.heat_zone_center.y + 5000 * np.sin(angle), -3000) for angle in angles]
-
-    def find_farthest_waypoint(self, plane_pos):
-        max_distance = 0
-        farthest_index = 0
-        for i, point in enumerate(self.waypoints):
-            distance = plane_pos.distance(point)
-            if distance > max_distance:
-                max_distance = distance
-                farthest_index = i
-        return farthest_index
+        self.current_enemy_plane_id_list = []
     
     def calculate_distance(self, plane_info, missile_info):
         return math.sqrt(
@@ -44,12 +29,13 @@ class Agent:
             (missile_info.z - plane_info.z) ** 2
         )
     
-    def get_action_cmd(self, target, plane, follow_plane=False):
+    def get_action_cmd(self, target, plane, mode="fix_point"):
         """_summary_
 
         Args:
-            target (_type_): _description_
-
+            target (list/myplaneinfo): 目标信息
+            plane (myplaneinfo): 自身信息 
+            mode (str): fix_point / plane
         Returns:
             list: [delta_alt, delta_yaw(角度), delta_vel]
         """
@@ -97,7 +83,7 @@ class Agent:
             action[1] = 0# 左转30度
             print("左转 30度", end=' ')
         
-        if follow_plane:
+        if mode == "plane":
             if target.tas - plane.tas > 10:
                 action[2] = 0
                 print("加速", end=' ')
@@ -114,50 +100,41 @@ class Agent:
         return action
 
     def step(self, obs):
+        enemy_plane_id_list = list(obs.enemy_planes.keys())
+        if enemy_plane_id_list:
+            self.current_enemy_plane_id_list = enemy_plane_id_list
+
         cmd_dict = {}
         for my_id, my_plane in obs.my_planes.items():
-            plane_pos = Vector3(my_plane.x, my_plane.y, my_plane.z)
             if not self.ini_pid or my_id not in self.id_pidctl_dict:
                 self.id_pidctl_dict[my_id] = FlyPid()
 
+            closest_missile = None
+            min_distance = 100e4
+            self.phase = 1
+            for entity_info in obs.rws_infos:
+                if entity_info.ind in self.current_enemy_plane_id_list:
+                    continue
+                if my_id in entity_info.alarm_ind_list:
+                    distance = self.calculate_distance(my_plane, entity_info)
+                    if distance < min_distance:
+                        min_distance = distance
+                        closest_missile = entity_info
+            if min_distance < 20000:
+                self.phase = 2
+                
+            # 情况2：占领热区
             if self.phase == 1:
-                distance_to_center = plane_pos.distance(self.heat_zone_center)
-                if distance_to_center <= self.heat_zone_radius:
-                    self.phase = 2
-                    self.generate_waypoints()
-
-            if self.phase == 1:
+                print("占领热区", end=' ')
                 target_pos = self.heat_zone_center
+                action = self.get_action_cmd(target_pos, my_plane, "fix_point")
+            elif self.phase == 2:
+                print("躲避missile!!!", end=' ')
+                target_pos = Vector3(closest_missile.x, closest_missile.y, closest_missile.z)
+                action = [1,6,2]
             else:
-                # 情况1：初始化
-                if self.control_position_index is None:
-                    self.control_position_index = self.find_farthest_waypoint(plane_pos)
-                    target_pos = self.waypoints[self.control_position_index]
+                raise NotImplementedError
                 
-                # 情况2： 发现导弹
-                # TODO：关于导弹信息
-                closest_missile = None
-                for entity_info in obs.rws_infos:
-                    if entity_info.ind in enemy_plane_id_list:
-                        continue
-
-                    if my_id in entity_info.alarm_ind_list:
-                        distance = self.calculate_distance(my_plane, entity_info)
-                        if distance < min_distance:
-                            min_distance = distance
-                            closest_missile = entity_info
-                
-                # 情况3：发现敌机
-                # TODO：关于敌机信息
-                enemy_plane_id_list = list(obs.enemy_planes.keys())
-
-                
-                # 情况4：继续占领热区
-                if plane_pos.distance(self.waypoints[self.control_position_index])<3000:
-                    self.control_position_index = self.find_farthest_waypoint(plane_pos)
-                    target_pos = self.waypoints[self.control_position_index]                
-
-            action = self.get_action_cmd(target_pos, my_plane)
             cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
             cmd_dict[my_id] = cmd
 
