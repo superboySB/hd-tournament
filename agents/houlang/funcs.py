@@ -78,4 +78,10 @@ class FlyPid:
         # control_throttle = pid_throttle.compute( current_airspeed, 1)
 
         return [control_aileron, control_elevator, 0, 1]
-    
+
+# Reformat the print output for easier copying and pasting
+def reformat_array_for_print(name, arr):
+    print(f"{name}: [")
+    for row in arr:
+        print(f"    {list(row)},")
+    print("]")
