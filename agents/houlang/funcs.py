@@ -130,8 +130,8 @@ def is_facing_missile(missile_positions, aircraft_positions, debug=False):
     target_position = missile_positions[-1] - missile_directions[-1] * 1000
 
     if debug:
-        reformat_array_for_print("missile: ", missile_positions)
-        reformat_array_for_print("aircraft: ", aircraft_positions)
+        # reformat_array_for_print("missile: ", missile_positions)
+        # reformat_array_for_print("aircraft: ", aircraft_positions)
         print("facing: ",facing_missile[-1])
         print("target_posotion: ",target_position)
 
@@ -247,4 +247,4 @@ if __name__ == "__main__":
         [1999.528905899759, -20406.302027636924, -807.285365581427],
     ])
 
-    print(facing_missile(missile_positions, aircraft_positions, True))
+    print(is_facing_missile(missile_positions, aircraft_positions, True))

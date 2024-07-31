@@ -17,7 +17,7 @@ class Agent:
         self.ini_pid = False
         self.run_counts = 0
         self.phase = 1  # 1 for approach, 2 for circling
-        self.heat_zone_center = Vector3(0, 0, -2000)
+        self.heat_zone_center = Vector3(0, 0, -3000)
         self.heat_zone_radius = 15000
         self.full_enemy_plane_id_list = []
         self.plane_tracks = {}  # 记录每架飞机的轨迹
@@ -62,14 +62,6 @@ class Agent:
         target_pos = Vector3(
             target.x, target.y, target.z
         )
-        # if mode == "missile":
-        #     target_avoid_position = determine_escape_target_position(np.array(self.missile_tracks[target.ind][-20:]), 
-        #                                                         np.array(self.plane_tracks[plane.ind][-20:]),
-        #                                                         debug = debug)
-        #     if self.previous_avoid_position is None:
-        #         self.previous_avoid_position = target_avoid_position
-            
-        #     target_pos = Vector3(self.previous_avoid_position[0], self.previous_avoid_position[1], plane.z)
             
         action = np.zeros(3, dtype=int)
 
@@ -213,11 +205,14 @@ class Agent:
                                                          np.array(self.plane_tracks[my_plane.ind][-20:]),
                                                         debug = debug_flag)                                               
                 if can_face_missile:
-                    target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],my_plane.z)
+                    target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],can_face_target_position[2])
                     action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
                     cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
                 else:
-                    cmd = {'control': [0,-0.7,0,1]}
+                    if my_plane.v_down < -50:
+                        cmd = {'control': [0,-1,0,1]}
+                    else:
+                        cmd = {'control': [-0.5,-0.5,0,0.5]}
             else:
                 raise NotImplementedError
                 
@@ -229,7 +224,10 @@ class Agent:
                 cmd_dict[my_id]['weapon'] = weapon_launch_info
             
             if debug_flag:
-                print("Step: ",self.run_counts,", ID: ", my_id, ", 位置：", [my_plane.x,my_plane.y,my_plane.z],"控制:", cmd["control"])
+                print("Step: ",self.run_counts,", ID: ", my_id, 
+                      ", 位置：", [my_plane.x,my_plane.y,my_plane.z],
+                      ", 速度：", [my_plane.v_north,my_plane.v_east,my_plane.v_down],
+                      ", 控制:", cmd["control"])
 
         self.run_counts += 1
         return cmd_dict
