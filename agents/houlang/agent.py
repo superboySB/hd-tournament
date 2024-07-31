@@ -22,7 +22,10 @@ class Agent:
         self.full_enemy_plane_id_list = []
         self.plane_tracks = {}  # 记录每架飞机的轨迹
         self.missile_tracks = {}  # 记录每个导弹的轨迹
+        self.missile_plane_distance_tracks = {}
+
         self.expired_missiles = set()  # 存储过时的导弹 ID
+        self.dangerous_missiles = set()
 
         # 初始化一些策略状态， 统计变量。
         self.missile_cds = {}
@@ -35,6 +38,13 @@ class Agent:
         return math.sqrt(
             (missile_info.x - plane_info.x) ** 2 +
             (missile_info.y - plane_info.y) ** 2
+        )
+    
+    def calculate_distance_3d(self, plane_info, missile_info):
+        return math.sqrt(
+            (missile_info.x - plane_info.x) ** 2 +
+            (missile_info.y - plane_info.y) ** 2 +
+            (missile_info.y - plane_info.z) ** 2
         )
     
     def get_action_cmd(self, target, plane, mode="fix_point", debug=False):
@@ -53,6 +63,9 @@ class Agent:
         elif mode == "missile":
             if debug:
                 print("躲避missile", end=' ')
+        elif mode == "plane":
+            if debug:
+                print("狗斗plane", end=' ')
         else:
             raise NotImplementedError
         
@@ -112,24 +125,28 @@ class Agent:
             action[1] = 0# 左转30度
             if debug:
                 print("左转 30度", end=' ')
+
         # --------------------------------------------------------------------
-        if mode == "plane":
-            if target.tas - plane.tas > 10:
-                action[2] = 0
-                if debug:
-                    print("加速", end=' ')
-            elif target.tas - plane.tas < -10:
-                action[2] = 2
-                if debug:
-                    print("减速", end=' ')
-            else:
-                action[2] = 1
-                if debug:
-                    print("匀速", end=' ')
-        else:
-            action[2] = 0
-            if debug:
-                print("加速", end=' ')
+        # if mode == "plane":
+        #     if target.tas - plane.tas > 10:
+        #         action[2] = 0
+        #         if debug:
+        #             print("加速", end=' ')
+        #     elif target.tas - plane.tas < -10:
+        #         action[2] = 2
+        #         if debug:
+        #             print("减速", end=' ')
+        #     else:
+        #         action[2] = 1
+        #         if debug:
+        #             print("匀速", end=' ')
+        # else:
+        #     action[2] = 0
+        #     if debug:
+        #         print("加速", end=' ')
+        action[2] = 0
+        if debug:
+            print("加速", end=' ')
             
         return action
 
@@ -174,31 +191,47 @@ class Agent:
             self.plane_tracks[my_id].append([my_plane.x, my_plane.y, my_plane.z])
 
             closest_missile = None
-            self.phase = 1  # 默认是冲向热区
-            # for entity_info in obs.rws_infos:
-            #     print("rws:", entity_info.ind)
+            if self.calculate_distance_2d(my_plane,self.heat_zone_center) >= 15000:
+                self.phase = 1  # 一开始是冲向热区
+            else:
+                self.phase = 2 # TODO: 然后开启狗斗模式
+
             for entity_info in obs.rws_infos:
                 if entity_info.ind in self.full_enemy_plane_id_list or entity_info.ind in self.expired_missiles:
                     continue
 
                 if my_id in entity_info.alarm_ind_list:
-                    distance = self.calculate_distance_2d(my_plane, entity_info)
+                    distance = self.calculate_distance_3d(my_plane, entity_info)
                     if entity_info.ind not in self.missile_tracks:
                         self.missile_tracks[entity_info.ind] = []
+                        self.missile_plane_distance_tracks[entity_info.ind] = []
                     self.missile_tracks[entity_info.ind].append([entity_info.x, entity_info.y, entity_info.z])
+                    self.missile_plane_distance_tracks[entity_info.ind].append(distance)
+
+                    if entity_info.ind in self.dangerous_missiles and len(self.missile_plane_distance_tracks[entity_info.ind]) > 40:
+                        if self.missile_plane_distance_tracks[entity_info.ind][-1] - self.missile_plane_distance_tracks[entity_info.ind][0] > 1000:
+                            self.expired_missiles.add(entity_info.ind)
+                            if debug_flag:
+                                print("expired_missiles: ",self.expired_missiles)
+                            continue
 
                     # 判断威胁
-                    if closest_missile is None or distance < self.calculate_distance_2d(my_plane, closest_missile):
+                    if closest_missile is None or distance < self.calculate_distance_3d(my_plane, closest_missile):
                         closest_missile = entity_info
 
-                if closest_missile:
-                    self.phase = 2
+                if closest_missile and self.calculate_distance_2d(my_plane, closest_missile) < 20000:
+                    self.dangerous_missiles.add(closest_missile.ind)
+                    self.phase = 3
                 
             if self.phase == 1:
                 target_pos = self.heat_zone_center
                 action = self.get_action_cmd(target_pos, my_plane, "fix_point", debug = debug_flag)
                 cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
             elif self.phase == 2:
+                target_pos = self.heat_zone_center
+                action = self.get_action_cmd(target_pos, my_plane, "plane", debug = debug_flag)
+                cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
+            elif self.phase == 3:
                 can_face_missile = False
                 if len(self.missile_tracks[closest_missile.ind])>20:
                     can_face_missile, can_face_target_position = is_facing_missile(np.array(self.missile_tracks[closest_missile.ind][-20:]), 
@@ -209,25 +242,26 @@ class Agent:
                     action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
                     cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
                 else:
-                    if my_plane.v_down < -50:
-                        cmd = {'control': [0,-1,0,1]}
-                    else:
-                        cmd = {'control': [-0.5,-0.5,0,0.5]}
+                    # if my_plane.v_down < -50:
+                    #     cmd = {'control': [0,-1,0,1]}
+                    # else:
+                    action = [0,6,0]
+                    cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
             else:
                 raise NotImplementedError
                 
             cmd_dict[my_id] = cmd
 
-            # 关于发弹
+            # TODO: 关于发弹的优化还没做
             weapon_launch_info = self.get_weapon_launch_info(obs,my_plane)
             if len(weapon_launch_info):
                 cmd_dict[my_id]['weapon'] = weapon_launch_info
-            
+                
             if debug_flag:
                 print("Step: ",self.run_counts,", ID: ", my_id, 
-                      ", 位置：", [my_plane.x,my_plane.y,my_plane.z],
-                      ", 速度：", [my_plane.v_north,my_plane.v_east,my_plane.v_down],
-                      ", 控制:", cmd["control"])
+                    ", 位置：", [my_plane.x,my_plane.y,my_plane.z],
+                    ", 速度：", [my_plane.v_north,my_plane.v_east,my_plane.v_down],
+                    ", 控制:", cmd["control"])
 
         self.run_counts += 1
         return cmd_dict

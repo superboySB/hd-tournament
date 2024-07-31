@@ -124,15 +124,17 @@ def is_facing_missile(missile_positions, aircraft_positions, debug=False):
     # 计算导弹相对位置的单位方向向量
     relative_directions = relative_positions / np.linalg.norm(relative_positions, axis=1)[:, None]
 
-    # 计算飞机和导弹的夹角
+    # 计算飞机和导弹的夹角余弦值
     cos_theta = np.sum(aircraft_directions * relative_directions, axis=1)
     facing_missile = cos_theta > 0
-    target_position = missile_positions[-1] - missile_directions[-1] * 1000
+
+    # 计算目标位置
+    target_position = missile_positions[-1] - missile_directions[-1] * 500
 
     if debug:
         # reformat_array_for_print("missile: ", missile_positions)
         # reformat_array_for_print("aircraft: ", aircraft_positions)
-        print("facing: ",facing_missile[-1])
+        print("facing_missile: ",facing_missile[-1])
         print("target_posotion: ",target_position)
 
     return facing_missile[-1],target_position

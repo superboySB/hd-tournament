@@ -3,7 +3,7 @@
     "end_time": 600.0,
     "units": [
         {
-            "side":"red",
+            "side":"blue",
             "type":"fighter",
             "is_uav": false,
             "x":2e3,
@@ -13,7 +13,7 @@
             "loadout":{"mid_missile":2,"short_missile":2}
         },
         {
-            "side":"blue", 
+            "side":"red", 
             "type":"fighter",
             "is_uav": false,
             "x":2e3, 
