@@ -7,9 +7,9 @@
             "type":"fighter",
             "is_uav": false,
             "x":2e3,
-            "y":-25e3,
+            "y":-10e3,
             "height":8e3,
-            "yaw": 1.57,
+            "yaw": -1,
             "loadout":{"mid_missile":0,"short_missile":0}
         },
         {
@@ -17,10 +17,10 @@
             "type":"fighter",
             "is_uav": false,
             "x":2e3, 
-            "y":-40e3, 
+            "y":25e3, 
             "height":8e3,
-            "yaw": 1,
-            "loadout":{"mid_missile":2,"short_missile":2}
+            "yaw": -1.73,
+            "loadout":{"mid_missile":2,"short_missile":0}
         }
     ]
 }
