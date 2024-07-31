@@ -1,7 +1,7 @@
 import numpy as np
 import math
 from sturnus.geo import *
-from .funcs import FlyPid  # 确保 FlyPid 模块正确引用
+from .funcs import FlyPid, Vector3, degrees_limit, determine_turn_direction  # 确保 FlyPid 模块正确引用
 
 last_target_pitch = 0
 last_target_heading = 0
@@ -19,7 +19,7 @@ class Agent:
         self.phase = 1  # 1 for approach, 2 for circling
         self.heat_zone_center = Vector3(0, 0, -3000)
         self.heat_zone_radius = 15000
-        self.current_enemy_plane_id_list = []
+        self.full_enemy_plane_id_list = []
         self.plane_tracks = {}  # 记录每架飞机的轨迹
         self.missile_tracks = {}  # 记录每个导弹的轨迹
         self.expired_missiles = set()  # 存储过时的导弹 ID
@@ -37,20 +37,7 @@ class Agent:
             (missile_info.y - plane_info.y) ** 2
         )
     
-    def estimate_missile_direction(self, missile_id, plane_pos):
-        """通过导弹的轨迹估计导弹的朝向"""
-        positions = self.missile_tracks[missile_id]
-        if len(positions) > 1:
-            dx = positions[-1].x - positions[-2].x
-            dy = positions[-1].y - positions[-2].y
-            dz = positions[-1].z - positions[-2].z
-        else:
-            dx = plane_pos.x - positions[-1].x
-            dy = plane_pos.y - positions[-1].y
-            dz = plane_pos.z - positions[-1].z
-        return Vector3(dx, dy, dz)
-    
-    def get_action_cmd(self, target, plane, mode="fix_point", debug=True):
+    def get_action_cmd(self, target, plane, mode="fix_point", debug=False):
         """_summary_
 
         Args:
@@ -77,57 +64,69 @@ class Agent:
         )
         action = np.zeros(3, dtype=int)
 
-        if target.z - plane.z < -500:# 升高
-            action[0] = 0
-            if debug:
-                print("升高", end=' ')
-        elif target.z - plane.z > 500:# 降高
-            action[0] = 2
-            if debug:
-                print("降高", end=' ')
-        else:
-            action[0] = 1# 保持
-            if debug:
-                print("保持", end=' ')
-
         # --------------------------------------------------------------------
         if mode == "missile":
-            missile_dir = self.estimate_missile_direction(target.ind, plane_pos)
-            target_yaw = np.arctan2(missile_dir.y, missile_dir.x)
-            delta_yaw = -180
+            _, turn_direction = determine_turn_direction(np.array(self.missile_tracks[target.ind][-50:]), 
+                                                        np.array(self.plane_tracks[plane.ind][-50:]),
+                                                        debug)
+            action[0] = 1
+            if debug:
+                    print("保持", end=' ')
+            if turn_direction == "left":
+                action[1] = 0
+                if debug:
+                    print("左转 30度", end=' ')
+            else:
+                action[1] = 6
+                if debug:
+                    print("右转 30度", end=' ')
         else:
+            if target.z - plane.z < -500:# 升高
+                action[0] = 0
+                if debug:
+                    print("升高", end=' ')
+            elif target.z - plane.z > 500:# 降高
+                action[0] = 2
+                if debug:
+                    print("降高", end=' ')
+            else:
+                action[0] = 1# 保持
+                if debug:
+                    print("保持", end=' ')
+
             to_target_vec = target_pos - plane_pos
             target_yaw = np.arctan2(to_target_vec.y, to_target_vec.x)
             delta_yaw = degrees_limit(math.degrees(target_yaw - plane.yaw))
         
-        if delta_yaw > 30:# 右转 30度
-            action[1] = 6
-            if debug:
-                print("右转 30度", end=' ')
-        elif 15 < delta_yaw:# 右转 15度
-            action[1] = 5
-            if debug:
-                print("右转 15度", end=' ')
-        elif 5 < delta_yaw:# 右转 5度
-            action[1] = 4
-            if debug:
-                print("右转 5度", end=' ')
-        elif -5 < delta_yaw:# 左转 5度
-            action[1] = 3
-            if debug:
-                print("直走", end=' ')
-        elif -15 < delta_yaw:# 直走
-            action[1] = 2
-            if debug:
-                print("左转 5度", end=' ')
-        elif -30 < delta_yaw:# 左转 15度
-            action[1] = 1
-            if debug:
-                print("左转 15度", end=' ')
-        else:
-            action[1] = 0# 左转30度
-            if debug:
-                print("左转 30度", end=' ')
+            if delta_yaw > 30:# 右转 30度
+                action[1] = 6
+                if debug:
+                    print("右转 30度", end=' ')
+            elif 15 < delta_yaw:# 右转 15度
+                action[1] = 5
+                if debug:
+                    print("右转 15度", end=' ')
+            elif 5 < delta_yaw:# 右转 5度
+                action[1] = 4
+                if debug:
+                    print("右转 5度", end=' ')
+            elif -5 < delta_yaw:# 左转 5度
+                action[1] = 3
+                if debug:
+                    print("直走", end=' ')
+            elif -15 < delta_yaw:# 直走
+                action[1] = 2
+                if debug:
+                    print("左转 5度", end=' ')
+            elif -30 < delta_yaw:# 左转 15度
+                action[1] = 1
+                if debug:
+                    print("左转 15度", end=' ')
+            else:
+                action[1] = 0# 左转30度
+                if debug:
+                    print("左转 30度", end=' ')
+
 
         # --------------------------------------------------------------------
         if mode == "plane":
@@ -174,10 +173,12 @@ class Agent:
 
     def step(self, obs):
         self.mid_lock_time = 0
-        
-        enemy_plane_id_list = list(obs.enemy_planes.keys())
-        if enemy_plane_id_list:
-            self.current_enemy_plane_id_list = enemy_plane_id_list
+        debug_flag = False
+        if self.run_counts % 10 == 0 :
+            debug_flag = True
+        if len(obs.awacs_infos) and len(self.full_enemy_plane_id_list)==0:
+            for awacs_i in obs.awacs_infos:
+                self.full_enemy_plane_id_list.append(awacs_i.ind)
 
         cmd_dict = {}
         for my_id, my_plane in obs.my_planes.items():
@@ -186,33 +187,34 @@ class Agent:
 
             if my_id not in self.plane_tracks:
                 self.plane_tracks[my_id] = []
-            self.plane_tracks[my_id].append(Vector3(my_plane.x, my_plane.y, my_plane.z))
+            self.plane_tracks[my_id].append([my_plane.x, my_plane.y, my_plane.z])
 
             closest_missile = None
             self.phase = 1  # 默认是冲向热区
+            # for entity_info in obs.rws_infos:
+            #     print("rws:", entity_info.ind)
             for entity_info in obs.rws_infos:
-                if entity_info.ind in self.current_enemy_plane_id_list or entity_info.ind in self.expired_missiles:
+                if entity_info.ind in self.full_enemy_plane_id_list or entity_info.ind in self.expired_missiles:
                     continue
 
                 if my_id in entity_info.alarm_ind_list:
                     distance = self.calculate_distance_2d(my_plane, entity_info)
                     if entity_info.ind not in self.missile_tracks:
                         self.missile_tracks[entity_info.ind] = []
-                    self.missile_tracks[entity_info.ind].append(Vector3(entity_info.x, entity_info.y, entity_info.z))
+                    self.missile_tracks[entity_info.ind].append([entity_info.x, entity_info.y, entity_info.z])
 
                     # 判断威胁
                     if closest_missile is None or distance < self.calculate_distance_2d(my_plane, closest_missile):
                         closest_missile = entity_info
 
-                if closest_missile and self.calculate_distance_2d(my_plane, closest_missile) < 20000:
+                if closest_missile and len(self.missile_tracks[closest_missile.ind]) > 100:
                     self.phase = 2
                 
             if self.phase == 1:
                 target_pos = self.heat_zone_center
-                action = self.get_action_cmd(target_pos, my_plane, "fix_point")
+                action = self.get_action_cmd(target_pos, my_plane, "fix_point", debug = debug_flag)
             elif self.phase == 2:
-                target_pos = Vector3(closest_missile.x, closest_missile.y, my_plane.z)
-                action = self.get_action_cmd(closest_missile, my_plane, "missile")
+                action = self.get_action_cmd(closest_missile, my_plane, "missile", debug = debug_flag)
             else:
                 raise NotImplementedError
                 
@@ -224,29 +226,12 @@ class Agent:
             if len(weapon_launch_info):
                 cmd_dict[my_id]['weapon'] = weapon_launch_info
             
-            print("Step: ",self.run_counts,", ID: ", my_id, ", 位置：", [my_plane.x,my_plane.y,my_plane.z], "目标：", [target_pos.x,target_pos.y,target_pos.z],"控制:", cmd["control"])
+            if debug_flag:
+                print("Step: ",self.run_counts,", ID: ", my_id, ", 位置：", [my_plane.x,my_plane.y,my_plane.z],"控制:", cmd["control"])
 
         self.run_counts += 1
         return cmd_dict
 
-class Vector3:
-    def __init__(self, x, y, z):
-        self.x = x
-        self.y = y
-        self.z = z
-
-    def __sub__(self, other):
-        return Vector3(self.x - other.x, self.y - other.y, self.z - other.z)
-
-    def distance(self, point):
-        return math.sqrt((self.x - point.x)**2 + (self.y - point.y)**2 + (self.z - point.z)**2)
-
-def degrees_limit(angle):
-    if angle > 180:
-        return angle - 360
-    elif angle < -180:
-        return angle + 360
-    return angle
 
 def fly_with_alt_yaw_vel(plane, action:list, fly_pid:FlyPid):
     """_summary_
