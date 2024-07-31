@@ -23,12 +23,18 @@ class Agent:
         self.plane_tracks = {}  # 记录每架飞机的轨迹
         self.missile_tracks = {}  # 记录每个导弹的轨迹
         self.expired_missiles = set()  # 存储过时的导弹 ID
+
+        # 初始化一些策略状态， 统计变量。
+        self.missile_cds = {}
+        self.mid_missile_time = {}    # 记录中距弹上一次打弹时间，用于设置打弹cd
+        self.short_missile_time = {}    # 记录近距弹上一次打弹时间，用于设置打弹cd
+        self.mid_lock_time = 0
+        self.mid_lock_target_ind = 0
     
-    def calculate_distance(self, plane_info, missile_info):
+    def calculate_distance_2d(self, plane_info, missile_info):
         return math.sqrt(
             (missile_info.x - plane_info.x) ** 2 +
-            (missile_info.y - plane_info.y) ** 2 +
-            (missile_info.z - plane_info.z) ** 2
+            (missile_info.y - plane_info.y) ** 2
         )
     
     def estimate_missile_direction(self, missile_id, plane_pos):
@@ -44,7 +50,7 @@ class Agent:
             dz = plane_pos.z - positions[-1].z
         return Vector3(dx, dy, dz)
     
-    def get_action_cmd(self, target, plane, mode="fix_point", debug=False):
+    def get_action_cmd(self, target, plane, mode="fix_point", debug=True):
         """_summary_
 
         Args:
@@ -88,7 +94,7 @@ class Agent:
         if mode == "missile":
             missile_dir = self.estimate_missile_direction(target.ind, plane_pos)
             target_yaw = np.arctan2(missile_dir.y, missile_dir.x)
-            delta_yaw = degrees_limit(math.degrees(target_yaw + 180 - plane.yaw))
+            delta_yaw = -180
         else:
             to_target_vec = target_pos - plane_pos
             target_yaw = np.arctan2(to_target_vec.y, to_target_vec.x)
@@ -145,6 +151,7 @@ class Agent:
         return action
 
     def step(self, obs):
+        self.mid_lock_time = 0
         enemy_plane_id_list = list(obs.enemy_planes.keys())
         if enemy_plane_id_list:
             self.current_enemy_plane_id_list = enemy_plane_id_list
@@ -159,33 +166,23 @@ class Agent:
             self.plane_tracks[my_id].append(Vector3(my_plane.x, my_plane.y, my_plane.z))
 
             closest_missile = None
-            self.phase = 1
+            self.phase = 1  # 默认是冲向热区
             for entity_info in obs.rws_infos:
                 if entity_info.ind in self.current_enemy_plane_id_list or entity_info.ind in self.expired_missiles:
                     continue
 
                 if my_id in entity_info.alarm_ind_list:
-                    distance = self.calculate_distance(my_plane, entity_info)
+                    distance = self.calculate_distance_2d(my_plane, entity_info)
                     if entity_info.ind not in self.missile_tracks:
                         self.missile_tracks[entity_info.ind] = []
                     self.missile_tracks[entity_info.ind].append(Vector3(entity_info.x, entity_info.y, entity_info.z))
 
-                    # 判断导弹是否过时
-                    if len(self.missile_tracks[entity_info.ind]) > 10 and len(self.plane_tracks[my_id]) > 10:
-                        missile_prev_pos = self.missile_tracks[entity_info.ind][-10]
-                        plane_prev_pos = self.plane_tracks[my_id][-10]
-                        prev_distance = self.calculate_distance(plane_prev_pos, missile_prev_pos)
-                        if distance > prev_distance:
-                            self.expired_missiles.add(entity_info.ind)
-                            print(f"导弹 {entity_info.ind} 已过时")
-                            continue
-
                     # 判断威胁
-                    if closest_missile is None or distance < self.calculate_distance(my_plane, closest_missile):
+                    if closest_missile is None or distance < self.calculate_distance_2d(my_plane, closest_missile):
                         closest_missile = entity_info
 
-            if closest_missile and self.calculate_distance(my_plane, closest_missile) < 30000:
-                self.phase = 2
+                if closest_missile and self.calculate_distance_2d(my_plane, closest_missile) < 20000:
+                    self.phase = 2
                 
             if self.phase == 1:
                 target_pos = self.heat_zone_center
@@ -198,9 +195,32 @@ class Agent:
                 
             cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
             cmd_dict[my_id] = cmd
+
+             # 关于发弹
+            if self.calculate_distance_2d(my_plane, self.heat_zone_center) < 20000:
+                weapon_launch_info = {}
+                if len(my_plane.mid_lock_list)>0 and \
+                    my_plane.loadout.get('mid_missile', 0)>0 and obs.sim_time - self.mid_missile_time.get(my_id, 0) > 10.0:
+                        weapon_launch_info = {
+                            'type': 'mid_missile',
+                            'target': my_plane.mid_lock_list[0],
+                        }
+                        self.mid_missile_time[my_id] = obs.sim_time
+                        self.mid_lock_time = obs.sim_time
+                        self.mid_lock_target_ind = my_plane.mid_lock_list[0]
+
+                if len(my_plane.short_lock_list)>0 and \
+                    my_plane.loadout.get('short_missile', 0)>0 and obs.sim_time - self.short_missile_time.get(my_id, 0) > 5.0:
+                        weapon_launch_info = {
+                            'type': 'short_missile',
+                            'target': my_plane.short_lock_list[0],
+                        }
+                        self.short_missile_time[my_id] = obs.sim_time
+
+                if len(weapon_launch_info):
+                    cmd_dict[my_id]['weapon'] = weapon_launch_info
             
-            if self.phase == 2:
-                print("Step: ",self.run_counts,", ID: ", my_id, ", 位置：", [my_plane.x,my_plane.y,my_plane.z], "目标：", [target_pos.x,target_pos.y,target_pos.z],"控制:", cmd["control"])
+            print("Step: ",self.run_counts,", ID: ", my_id, ", 位置：", [my_plane.x,my_plane.y,my_plane.z], "目标：", [target_pos.x,target_pos.y,target_pos.z],"控制:", cmd["control"])
 
         self.run_counts += 1
         return cmd_dict
