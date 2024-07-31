@@ -150,8 +150,31 @@ class Agent:
             
         return action
 
+    def get_weapon_launch_info(self, obs, my_plane):
+        weapon_launch_info = {}
+        if len(my_plane.mid_lock_list)>0 and \
+            my_plane.loadout.get('mid_missile', 0)>0 and obs.sim_time - self.mid_missile_time.get(my_plane.ind, 0) > 10.0:
+                weapon_launch_info = {
+                    'type': 'mid_missile',
+                    'target': my_plane.mid_lock_list[0],
+                }
+                self.mid_missile_time[my_plane.ind] = obs.sim_time
+                self.mid_lock_time = obs.sim_time
+                self.mid_lock_target_ind = my_plane.mid_lock_list[0]
+
+        if len(my_plane.short_lock_list)>0 and \
+            my_plane.loadout.get('short_missile', 0)>0 and obs.sim_time - self.short_missile_time.get(my_plane.ind, 0) > 5.0:
+                weapon_launch_info = {
+                    'type': 'short_missile',
+                    'target': my_plane.short_lock_list[0],
+                }
+                self.short_missile_time[my_plane.ind] = obs.sim_time
+
+        return weapon_launch_info
+
     def step(self, obs):
         self.mid_lock_time = 0
+        
         enemy_plane_id_list = list(obs.enemy_planes.keys())
         if enemy_plane_id_list:
             self.current_enemy_plane_id_list = enemy_plane_id_list
@@ -196,29 +219,10 @@ class Agent:
             cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
             cmd_dict[my_id] = cmd
 
-             # 关于发弹
-            if self.calculate_distance_2d(my_plane, self.heat_zone_center) < 20000:
-                weapon_launch_info = {}
-                if len(my_plane.mid_lock_list)>0 and \
-                    my_plane.loadout.get('mid_missile', 0)>0 and obs.sim_time - self.mid_missile_time.get(my_id, 0) > 10.0:
-                        weapon_launch_info = {
-                            'type': 'mid_missile',
-                            'target': my_plane.mid_lock_list[0],
-                        }
-                        self.mid_missile_time[my_id] = obs.sim_time
-                        self.mid_lock_time = obs.sim_time
-                        self.mid_lock_target_ind = my_plane.mid_lock_list[0]
-
-                if len(my_plane.short_lock_list)>0 and \
-                    my_plane.loadout.get('short_missile', 0)>0 and obs.sim_time - self.short_missile_time.get(my_id, 0) > 5.0:
-                        weapon_launch_info = {
-                            'type': 'short_missile',
-                            'target': my_plane.short_lock_list[0],
-                        }
-                        self.short_missile_time[my_id] = obs.sim_time
-
-                if len(weapon_launch_info):
-                    cmd_dict[my_id]['weapon'] = weapon_launch_info
+            # 关于发弹
+            weapon_launch_info = self.get_weapon_launch_info(obs,my_plane)
+            if len(weapon_launch_info):
+                cmd_dict[my_id]['weapon'] = weapon_launch_info
             
             print("Step: ",self.run_counts,", ID: ", my_id, ", 位置：", [my_plane.x,my_plane.y,my_plane.z], "目标：", [target_pos.x,target_pos.y,target_pos.z],"控制:", cmd["control"])
 
