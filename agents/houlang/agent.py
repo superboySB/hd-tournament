@@ -168,7 +168,6 @@ class Agent:
                     'target': my_plane.mid_lock_list[0],
                 }
                 self.mid_missile_time[my_plane.ind] = obs.sim_time
-                self.mid_lock_time = obs.sim_time
                 self.mid_lock_target_ind = my_plane.mid_lock_list[0]
 
         if len(my_plane.short_lock_list)>0 and \
@@ -181,9 +180,7 @@ class Agent:
 
         return weapon_launch_info
 
-    def step(self, obs):
-        
-        self.mid_lock_time = 0
+    def step(self, obs):        
         debug_flag = False
         if self.run_counts % 10 == 0 :
             print("\n------------------------------------------------------------------\n")
@@ -206,6 +203,7 @@ class Agent:
             self.myplane_tracks[my_id].append([my_plane.x, my_plane.y, my_plane.z])
 
             closest_missile = None
+            cmd = None
             if self.calculate_distance_2d(my_plane,self.heat_zone_center) >= 15000:
                 self.phase = 1  # 一开始是冲向热区
             else:
@@ -232,51 +230,49 @@ class Agent:
 
                     # 判断威胁
                     if closest_missile is None or distance < self.calculate_distance_3d(my_plane, closest_missile):
-                        closest_missile = entity_info
+                        if len(self.missile_tracks[entity_info.ind])>10:
+                            can_face_missile, _, is_ahead_of_enemy = is_facing_missile(np.array(self.missile_tracks[entity_info.ind][-10:]), 
+                                                        np.array(self.myplane_tracks[my_plane.ind][-10:]))
+                            if can_face_missile and is_ahead_of_enemy: # TODO： 只躲能躲的弹，否则进攻就是最好的防守
+                                self.phase = 3
+                                self.dangerous_missiles.add(entity_info.ind)
+                                closest_missile = entity_info
 
-                if closest_missile and self.calculate_distance_2d(my_plane, closest_missile) < 20000:
-                    self.dangerous_missiles.add(closest_missile.ind)
-                    self.phase = 3
+            if closest_missile:
+                _, can_face_target_position, _ = is_facing_missile(np.array(self.missile_tracks[closest_missile.ind][-10:]), 
+                                                        np.array(self.myplane_tracks[my_plane.ind][-10:]), debug = debug_flag)                                               
+                target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],can_face_target_position[2])
+                action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
+                cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
                 
             if self.phase == 1:
                 target_pos = self.heat_zone_center
                 action = self.get_action_cmd(target_pos, my_plane, "fix_point", debug = debug_flag)
                 cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
-            elif self.phase == 2:
+
+            if self.phase == 2:
                 target_pos = self.heat_zone_center
                 action = self.get_action_cmd(target_pos, my_plane, "fix_point", debug = debug_flag)
                 cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
-            elif self.phase == 3:
-                can_face_missile = False
-                if len(self.missile_tracks[closest_missile.ind])>20:
-                    can_face_missile, can_face_target_position, _ = is_facing_missile(np.array(self.missile_tracks[closest_missile.ind][-20:]), 
-                                                         np.array(self.myplane_tracks[my_plane.ind][-20:]),
-                                                        debug = debug_flag)                                               
-                if can_face_missile:
-                    target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],can_face_target_position[2])
-                    action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
-                    cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
-                else:
-                    # if my_plane.v_down < -200:
-                    #     cmd = {'control': [0,-1,0,1]}
-                    # else:
-                    action = [0,6,0]
-                    cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
-            else:
-                raise NotImplementedError
                 
-            cmd_dict[my_id] = cmd
-
-            # TODO: 关于发弹的优化还没做，这个可以单独做，不要硬绑在机动的状态里面，不然容易克制不住奇兵
+            # 以上是机动部分
+            # ---------------------------------------------------------------------------------------------------
+            # 以下是发弹部分
+            #  TODO: 关于发弹的优化还没做，这个可以单独做，不要硬绑在机动的状态里面，不然容易克制不住奇兵
             weapon_launch_info = self.get_weapon_launch_info(obs,my_plane)
             if len(weapon_launch_info):
-                cmd_dict[my_id]['weapon'] = weapon_launch_info
-                
+                cmd['weapon'] = weapon_launch_info
+            
+            # 拼接命令，准备机动+发弹控制
+            cmd_dict[my_id] = cmd
             if debug_flag:
+                tmp_mid_lock_list = [] if my_plane.is_uav else my_plane.mid_lock_list
                 print("Step: ",self.run_counts,", ID: ", my_id, 
                     ", 位置：", [my_plane.x,my_plane.y,my_plane.z],
                     ", 速度：", [my_plane.v_north,my_plane.v_east,my_plane.v_down],
-                    ", 控制:", cmd["control"])
+                    ", 机动控制: ", cmd["control"],
+                    ", (中距)/近距弹锁定信息: ", tmp_mid_lock_list,my_plane.short_lock_list,
+                    ", 发弹控制: ", weapon_launch_info)
 
         self.run_counts += 1
         return cmd_dict
