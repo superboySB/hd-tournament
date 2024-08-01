@@ -19,8 +19,9 @@ class Agent(BaseAgent):
         self.ini_pid = False
         self.run_counts = 0
         self.phase = 1  # 1 for approach, 2 for circling
-        self.heat_zone_center = Vector3(0, 0, -3000)
+        self.heat_zone_center = Vector3(45e3, 0, -3000) # TODO: 左边是保护无人机用的假热区中心，真热区：Vector3(0, 0, -3000)
         self.heat_zone_radius = 15000
+        self.use_fake_heat_zone = True
         self.full_enemy_plane_id_list = []
         self.myplane_tracks = {}  # 记录我方每架飞机的轨迹
         self.enemy_plane_tracks = {} # 记录敌方每架飞机的轨迹
@@ -129,21 +130,25 @@ class Agent(BaseAgent):
                 print("左转 30度", end=' ')
 
         # --------------------------------------------------------------------
-        if mode == "fix_point":
-            if plane.is_uav:
-                action[2] = 0
-                if debug:
-                    print("加速", end=' ')
-            else:
-                action[2] = 1
-                if debug:
-                    print("匀速", end=' ')
-        elif mode in ["missile","plane"]:
-            action[2] = 0
-            if debug:
-                print("加速", end=' ')
-        else:
-            raise NotImplementedError
+        action[2] = 0
+        if debug:
+            print("加速", end=' ')
+
+        # if mode == "fix_point":
+        #     if plane.is_uav:
+        #         action[2] = 0
+        #         if debug:
+        #             print("加速", end=' ')
+        #     else:
+        #         action[2] = 1
+        #         if debug:
+        #             print("匀速", end=' ')
+        # elif mode in ["missile","plane"]:
+        #     action[2] = 0
+        #     if debug:
+        #         print("加速", end=' ')
+        # else:
+        #     raise NotImplementedError
             
         return action
 
@@ -253,8 +258,11 @@ class Agent(BaseAgent):
             self.myplane_tracks[my_id].append([my_plane.x, my_plane.y, my_plane.z])
 
             closest_missile = None
-            if self.calculate_distance_2d(my_plane,self.heat_zone_center) >= 35000:
-                self.phase = 1  # 一开始是冲向热区(伪)
+            if not my_plane.is_uav and self.use_fake_heat_zone:
+                if self.calculate_distance_2d(my_plane,self.heat_zone_center) >= 15000:
+                    self.phase = 1  # 一开始是冲向热区(伪)
+                else:
+                    self.use_fake_heat_zone = False
             else:
                 self.phase = 2 # 然后开启狗斗模式
                 
