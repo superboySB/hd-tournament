@@ -20,7 +20,8 @@ class Agent:
         self.heat_zone_center = Vector3(0, 0, -3000)
         self.heat_zone_radius = 15000
         self.full_enemy_plane_id_list = []
-        self.plane_tracks = {}  # 记录每架飞机的轨迹
+        self.myplane_tracks = {}  # 记录我方每架飞机的轨迹
+        self.enemy_plane_tracks = {} # 记录敌方每架飞机的轨迹
         self.missile_tracks = {}  # 记录每个导弹的轨迹
         self.missile_plane_distance_tracks = {}
 
@@ -181,22 +182,28 @@ class Agent:
         return weapon_launch_info
 
     def step(self, obs):
+        
         self.mid_lock_time = 0
         debug_flag = False
         if self.run_counts % 10 == 0 :
+            print("\n------------------------------------------------------------------\n")
             debug_flag = True
         if len(obs.awacs_infos) and len(self.full_enemy_plane_id_list)==0:
             for awacs_i in obs.awacs_infos:
                 self.full_enemy_plane_id_list.append(awacs_i.ind)
+                self.enemy_plane_tracks[awacs_i.ind] = []
+        
+        if len(obs.enemy_planes):  # TODO: 在这里添加敌机的跟踪逻辑
+            pass
 
         cmd_dict = {}
         for my_id, my_plane in obs.my_planes.items():
             if not self.ini_pid or my_id not in self.id_pidctl_dict:
                 self.id_pidctl_dict[my_id] = FlyPid()
 
-            if my_id not in self.plane_tracks:
-                self.plane_tracks[my_id] = []
-            self.plane_tracks[my_id].append([my_plane.x, my_plane.y, my_plane.z])
+            if my_id not in self.myplane_tracks:
+                self.myplane_tracks[my_id] = []
+            self.myplane_tracks[my_id].append([my_plane.x, my_plane.y, my_plane.z])
 
             closest_missile = None
             if self.calculate_distance_2d(my_plane,self.heat_zone_center) >= 15000:
@@ -242,8 +249,8 @@ class Agent:
             elif self.phase == 3:
                 can_face_missile = False
                 if len(self.missile_tracks[closest_missile.ind])>20:
-                    can_face_missile, can_face_target_position = is_facing_missile(np.array(self.missile_tracks[closest_missile.ind][-20:]), 
-                                                         np.array(self.plane_tracks[my_plane.ind][-20:]),
+                    can_face_missile, can_face_target_position, _ = is_facing_missile(np.array(self.missile_tracks[closest_missile.ind][-20:]), 
+                                                         np.array(self.myplane_tracks[my_plane.ind][-20:]),
                                                         debug = debug_flag)                                               
                 if can_face_missile:
                     target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],can_face_target_position[2])
@@ -260,7 +267,7 @@ class Agent:
                 
             cmd_dict[my_id] = cmd
 
-            # TODO: 关于发弹的优化还没做
+            # TODO: 关于发弹的优化还没做，这个可以单独做，不要硬绑在机动的状态里面，不然容易克制不住奇兵
             weapon_launch_info = self.get_weapon_launch_info(obs,my_plane)
             if len(weapon_launch_info):
                 cmd_dict[my_id]['weapon'] = weapon_launch_info
