@@ -1,5 +1,7 @@
 import math
 import numpy as np
+import torch
+
 # Kp、Ki、Kd：分别是比例、积分和微分增益参数，决定了 PID 控制器对误差的响应速度和稳定性。
 # setpoint：控制目标值，系统希望达到的设定值。
 # output_limits：限制输出范围的元组，用于避免控制输出过大或过小。
@@ -106,53 +108,47 @@ def degrees_limit(angle):
         return angle + 360
     return angle
 
-def is_facing_target(target_posisions, aircraft_positions, debug=False):
-    # 时间间隔
-    delta_t = 0.05
+def estimate_direction_pytorch(positions):
+    """ 使用 PyTorch 进行线性回归估计方向向量 """
+    positions = torch.tensor(positions, dtype=torch.float32)
+    t = torch.arange(positions.size(0), dtype=torch.float32).reshape(-1, 1)
+    t_with_bias = torch.cat([t, torch.ones_like(t)], dim=1)
 
-    # 计算速度向量（方向）
-    aircraft_directions = (aircraft_positions[1:] - aircraft_positions[:-1]) / delta_t
-    target_directions = (target_posisions[1:] - target_posisions[:-1]) / delta_t
+    # 使用伪逆求解线性回归参数，以防止奇异矩阵错误
+    XTX_pinv = torch.linalg.pinv(t_with_bias.T.matmul(t_with_bias))
+    XTy = t_with_bias.T.matmul(positions)
+    params = XTX_pinv.matmul(XTy)
+    direction = params[:-1].squeeze()  # 不需要截距
 
-    # 归一化方向向量
-    aircraft_directions /= np.linalg.norm(aircraft_directions, axis=1)[:, None]
-    target_directions /= np.linalg.norm(target_directions, axis=1)[:, None]
+    norm = torch.linalg.norm(direction)
+    if norm == 0:
+        return direction.numpy()  # 如果方向向量的模为0，返回原向量
+    return (direction / norm).numpy()
 
-    # 计算相对位置向量
-    relative_positions = target_posisions[:-1] - aircraft_positions[:-1]
+def is_facing_target(target_positions, aircraft_positions, debug=False):
+    target_direction = estimate_direction_pytorch(target_positions)
+    aircraft_direction = estimate_direction_pytorch(aircraft_positions)
 
-    # 计算导弹相对位置的单位方向向量
-    relative_directions = relative_positions / np.linalg.norm(relative_positions, axis=1)[:, None]
+    cos_theta = np.dot(target_direction, aircraft_direction)
 
-    # 计算飞机和导弹的夹角余弦值
-    cos_theta = np.sum(aircraft_directions * relative_directions, axis=1)
-    facing_target = cos_theta > 0
+    # 当两者方向的夹角大于90度时，认为是背对状态
+    facing_target = cos_theta < 0
 
-    # 计算目标位置
-    target_position = target_posisions[-1] - target_directions[-1] * 500
+    # 预测目标的新位置，注意这里是减去500倍的速度向量
+    target_position = target_positions[-1] - target_direction * 500
 
-    # 判断飞机是否在导弹的前方
-    # 获取最新的导弹位置和方向
-    target_last_position = target_posisions[-1]
-    target_last_direction = target_directions[-1]
-
-    # 获取最新的飞机位置
-    aircraft_last_position = aircraft_positions[-1]
-
-    # 计算导弹末位置相对于飞机的位置向量
-    relative_position = target_last_position - aircraft_last_position
-
-    # 导弹方向与导弹到飞机的相对位置向量的点积
-    is_ahead_of_target = np.dot(target_last_direction, relative_position) < 0
+    # 判断飞机是否在目标前方
+    is_ahead_of_target = np.dot(target_direction, aircraft_positions[-1] - target_positions[-1]) > 0
 
     if debug:
-        reformat_array_for_print("target: ", target_posisions)
+        reformat_array_for_print("target: ", target_positions)
         reformat_array_for_print("aircraft: ", aircraft_positions)
-        print("facing_target: ",facing_target[-1])
-        print("target_posotion: ",target_position)
+        print("cos_theta: ", cos_theta)
+        print("facing_target: ", facing_target)
+        print("target_position: ", target_position)
         print("is_ahead_of_target: ", is_ahead_of_target)
 
-    return facing_target[-1], target_position, is_ahead_of_target
+    return facing_target, target_position, is_ahead_of_target
 
 
 if __name__ == "__main__":
@@ -204,4 +200,4 @@ if __name__ == "__main__":
     [0.24774763008118403, -9690.967036638542, 2001.6045279820082],
 ])
 
-    print(is_facing_target(target_positions, aircraft_positions, False))
+    print(is_facing_target(target_positions, aircraft_positions, True))

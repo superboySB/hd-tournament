@@ -147,15 +147,14 @@ class Agent:
 
     def get_weapon_launch_info(self, obs, my_plane):
         weapon_launch_info = {}
-
         if len(my_plane.mid_lock_list)>0 and \
-            my_plane.loadout.get('mid_missile', 0)>0 and obs.sim_time - self.mid_missile_time.get(my_plane.ind, 0) > 1.0:
+            my_plane.loadout.get('mid_missile', 0)>0 and obs.sim_time - self.mid_missile_time.get(my_plane.ind, 0) > 5.0:
                 best_target = None
                 min_distance = float('inf')
                 for target_id in my_plane.mid_lock_list:
                     if target_id in self.enemy_plane_tracks:
-                        target_positions = np.array(self.enemy_plane_tracks[target_id][-20:])
-                        aircraft_positions = np.array(self.myplane_tracks[my_plane.ind][-20:])
+                        target_positions = np.array(self.enemy_plane_tracks[target_id][-10:])
+                        aircraft_positions = np.array(self.myplane_tracks[my_plane.ind][-10:])
                         facing_target, _, is_ahead_of_target = is_facing_target(target_positions, aircraft_positions, True)
                         
                         if not facing_target and not is_ahead_of_target:
@@ -177,8 +176,8 @@ class Agent:
                 min_distance = float('inf')
                 for target_id in my_plane.short_lock_list:
                     if target_id in self.enemy_plane_tracks:
-                        target_positions = np.array(self.enemy_plane_tracks[target_id][-20:])
-                        aircraft_positions = np.array(self.myplane_tracks[my_plane.ind][-20:])
+                        target_positions = np.array(self.enemy_plane_tracks[target_id][-10:])
+                        aircraft_positions = np.array(self.myplane_tracks[my_plane.ind][-10:])
                         facing_target, _, is_ahead_of_target = is_facing_target(target_positions, aircraft_positions, True)
                         
                         if not facing_target and not is_ahead_of_target:
@@ -280,17 +279,17 @@ class Agent:
 
                     # 判断威胁
                     if (closest_missile is None or distance < self.calculate_distance_3d(my_plane, closest_missile)) and (distance < 20000):
+                        self.dangerous_missiles.add(entity_info.ind)
                         if len(self.missile_tracks[entity_info.ind])>10:
-                            can_face_missile, _, is_ahead_of_enemy = is_facing_target(np.array(self.missile_tracks[entity_info.ind][-20:]), 
-                                                        np.array(self.myplane_tracks[my_plane.ind][-20:]))
+                            can_face_missile, _, is_ahead_of_enemy = is_facing_target(np.array(self.missile_tracks[entity_info.ind][-10:]), 
+                                                        np.array(self.myplane_tracks[my_plane.ind][-10:]))
                             if can_face_missile and is_ahead_of_enemy: # TODO: 只躲容易躲的弹，否则进攻就是最好的防守
                                 self.phase = 3
-                                self.dangerous_missiles.add(entity_info.ind)
                                 closest_missile = entity_info
 
             if closest_missile:
-                _, can_face_target_position, _ = is_facing_target(np.array(self.missile_tracks[closest_missile.ind][-20:]), 
-                                                        np.array(self.myplane_tracks[my_plane.ind][-20:]), debug = debug_flag)                                               
+                _, can_face_target_position, _ = is_facing_target(np.array(self.missile_tracks[closest_missile.ind][-10:]), 
+                                                        np.array(self.myplane_tracks[my_plane.ind][-10:]), debug = debug_flag)                                               
                 target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],can_face_target_position[2])
                 action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
                 cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
