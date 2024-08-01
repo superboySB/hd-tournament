@@ -41,9 +41,9 @@ class Agent:
         for ally_ind, ally in allies.items():
             # 按格式设置每架飞机的动作、武器指令
             weapon_launch_info = {}
+
             action = [0, 0, 0, 0]
-            # if np.random.rand() < 0.5:
-            #     action = [-0.5 + 1 * self.rng.random(), -0.06 + 0.1*self.rng.random(), 0.01 * np.random.rand(), 0.5 + 0.5 * np.random.rand()]
+            
             if obs.sim_time > 1 and len(ally.mid_lock_list)>0 and ally.loadout.get('mid_missile', 0):
                         # input()
                 weapon_launch_info = {
