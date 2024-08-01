@@ -127,26 +127,34 @@ class Agent:
                 print("左转 30度", end=' ')
 
         # --------------------------------------------------------------------
-        # if mode == "plane":
-        #     if target.tas - plane.tas > 10:
-        #         action[2] = 0
-        #         if debug:
-        #             print("加速", end=' ')
-        #     elif target.tas - plane.tas < -10:
-        #         action[2] = 2
-        #         if debug:
-        #             print("减速", end=' ')
-        #     else:
-        #         action[2] = 1
-        #         if debug:
-        #             print("匀速", end=' ')
-        # else:
-        #     action[2] = 0
-        #     if debug:
-        #         print("加速", end=' ')
-        action[2] = 0
-        if debug:
-            print("加速", end=' ')
+        if mode == "fix_point":
+            if plane.is_uav:
+                action[2] = 0
+                if debug:
+                    print("加速", end=' ')
+            else:
+                action[2] = 1
+                if debug:
+                    print("匀速", end=' ')
+        elif mode == "plane":
+            if target.tas - plane.tas > 10:
+                action[2] = 0
+                if debug:
+                    print("加速", end=' ')
+            elif target.tas - plane.tas < -10:
+                action[2] = 2
+                if debug:
+                    print("减速", end=' ')
+            else:
+                action[2] = 1
+                if debug:
+                    print("匀速", end=' ')
+        elif mode == "missile":
+            action[2] = 0
+            if debug:
+                print("加速", end=' ')
+        else:
+            raise NotImplementedError
             
         return action
 
@@ -229,7 +237,7 @@ class Agent:
                 cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
             elif self.phase == 2:
                 target_pos = self.heat_zone_center
-                action = self.get_action_cmd(target_pos, my_plane, "plane", debug = debug_flag)
+                action = self.get_action_cmd(target_pos, my_plane, "fix_point", debug = debug_flag)
                 cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
             elif self.phase == 3:
                 can_face_missile = False
@@ -242,7 +250,7 @@ class Agent:
                     action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
                     cmd = {'control': fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])}
                 else:
-                    # if my_plane.v_down < -50:
+                    # if my_plane.v_down < -200:
                     #     cmd = {'control': [0,-1,0,1]}
                     # else:
                     action = [0,6,0]
