@@ -382,3 +382,5 @@ tags
 
 # this project
 *.acmi
+
+!*.pyd
