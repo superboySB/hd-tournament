@@ -135,7 +135,7 @@ def is_facing_target(target_positions, aircraft_positions, debug=False):
     facing_target = cos_theta < 0
 
     # 预测目标的新位置，注意这里是减去500倍的速度向量
-    target_position = target_positions[-1] - target_direction * 500
+    target_position = target_positions[-1] - target_direction * 1000
 
     # 判断飞机是否在目标前方
     is_ahead_of_target = np.dot(target_direction, aircraft_positions[-1] - target_positions[-1]) > 0
