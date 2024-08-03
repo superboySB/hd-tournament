@@ -165,13 +165,16 @@ class Agent:
             )
 
         enemies = obs.enemy_planes
+        e_inds = []
         for enemy in enemies.values():
+            e_inds.append(enemy.ind)
             enemy.pos = Vec3(
                 enemy.x, enemy.y, enemy.z
             )
         awacs_infos = obs.awacs_infos
 
         self.mid_lock_time = 0
+        
         # 对每架我方飞机计算行动
         for ally_ind, ally in allies.items():
             weapon_launch_info = {}

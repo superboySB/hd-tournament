@@ -4,8 +4,8 @@ import numpy as np
 
 extensions = [
     Extension(
-        "agents.houlang.agent", 
-        ["agents/houlang/agent.pyx"],
+        "agents.houlang.my_agent_demo", 
+        ["agents/houlang/my_agent_demo.pyx"],
         include_dirs=[np.get_include()],
     ),
 ]

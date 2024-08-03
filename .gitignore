@@ -381,6 +381,6 @@ tags
 
 
 # this project
-*.acmi
+replay.acmi
 
 !*.pyd

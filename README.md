@@ -49,10 +49,9 @@ python demo_requ_0721.py
 ```
 
 
-
 ## Tips
 ### 编译pyd
-搞一个同名的agent.pyx文件，然后我们尝试在最外面编辑`setup.py`进行封装，运行下面的代码。
+搞一个同名的my_agent_demo.pyx文件，然后我们尝试在最外面编辑`setup.py`进行封装，运行下面的代码。
 ```sh
 python setup.py build_ext --inplace
 ```

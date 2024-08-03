@@ -148,7 +148,7 @@ def is_facing_target(target_positions, aircraft_positions, debug=False):
         print("target_position: ", target_position)
         print("is_ahead_of_target: ", is_ahead_of_target)
 
-    return facing_target, cos_theta, target_position, is_ahead_of_target
+    return facing_target, target_position, is_ahead_of_target
 
 
 if __name__ == "__main__":
