@@ -282,9 +282,9 @@ class Agent(BaseAgent):
 
     def step(self, obs):
         debug_flag = False
-        if self.run_counts % 100 == 0:
-            print("\n------------------------------------------------------------------\n")
-            debug_flag = True
+        # if self.run_counts % 100 == 0:
+        #     print("\n------------------------------------------------------------------\n")
+        #     debug_flag = True
 
         if self.run_counts == 0:
             self.assign_targets(obs,debug=debug_flag)

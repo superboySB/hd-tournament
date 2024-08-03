@@ -53,6 +53,8 @@ python demo_requ_0721.py
 ### 编译pyd
 搞一个同名的my_agent_demo.pyx文件，然后我们尝试在最外面编辑`setup.py`进行封装，运行下面的代码。
 ```sh
+C:\ProgramData\Miniconda3\envs\hdbisai\python.exe -m pip install cython --proxy=127.0.0.1:10809  
+
 python setup.py build_ext --inplace
 ```
 
