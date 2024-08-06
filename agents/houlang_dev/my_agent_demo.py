@@ -132,7 +132,7 @@ class Agent(BaseAgent):
             if debug:
                 print("降高", end=' ')
         else:
-            action[0] = 1# 保持
+            action[0] = 1   # 保持
             if debug:
                 print("保持", end=' ')
 
@@ -347,6 +347,7 @@ class Agent(BaseAgent):
                 
                 target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],my_plane.z)
                 action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
+                action[0] = 1  # 不改变高度可以让转向加快
 
                 if cos_theta < 0.7:
                     if debug_flag:
@@ -361,7 +362,7 @@ class Agent(BaseAgent):
                 action = self.get_action_cmd(target_pos, my_plane, "fix_point", debug = debug_flag)
                 raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
             
-            if my_plane.z > 7000:
+            if my_plane.z > 6500:
                 if debug_flag:
                     print("高度过低，紧急抬升！！!")
                     raw_cmd_dict[my_id]['control'][1] = -1
