@@ -47,6 +47,8 @@ class Agent(BaseAgent):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         model_path = os.path.join(current_dir, "model.pkl")
         self.rl_fc_model = create_fc_model(model_path)
+        self.rl_targets = {}
+        self.use_this_rl_target_times = {}
     
     def calculate_distance_2d(self, plane_info, missile_info):
         return math.sqrt(
@@ -283,7 +285,14 @@ class Agent(BaseAgent):
                 self.myplane_tracks[my_id] = []
             self.myplane_tracks[my_id].append([my_plane.x, my_plane.y, my_plane.z])
 
-            closest_missile = None
+            if my_id not in self.rl_targets:
+                self.rl_targets[my_id] = None
+            if my_id not in self.use_this_rl_target_times:
+                self.use_this_rl_target_times[my_id] = 0
+            if self.use_this_rl_target_times[my_id] > 20:
+                self.use_this_rl_target_times[my_id] = 0
+                self.rl_targets[my_id] = None
+            
             if self.use_fake_heat_zone[my_id]:
                 assigned_target = self.assigned_targets[my_id]
                 if self.calculate_distance_3d(my_plane, assigned_target) >= 40000:  # TODO：这个切换比较tricky
@@ -293,7 +302,8 @@ class Agent(BaseAgent):
                     self.phase = 2  # 然后开启狗斗模式
             else:
                 self.phase = 2
-                
+            
+            closest_missile = None
             for entity_info in obs.rws_infos:
                 if entity_info.ind in self.full_enemy_plane_id_list or entity_info.ind in self.expired_missiles:
                     continue
@@ -339,11 +349,17 @@ class Agent(BaseAgent):
                     if debug_flag:
                         print("不太好躲!!! 交给新唯家成!!!")
                     # action = [1,6,0] # 全力右转
-                    # action = [1,0,0] # 全力左转
-                    delta = np.array([0,30,-40])  # 高度差, 速度差, 偏航差.
-                    targets = self.rl_fc_model.get_target(my_plane, delta)
-                    control_cmds = self.rl_fc_model.control_cmd(my_plane, targets)
-                    raw_cmd_dict[my_id]['control'] = control_cmds
+                    action = [1,0,0] # 全力左转
+                    raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
+
+                    # TODO: RL飞控的风险较大
+                    # delta = np.random.uniform([-100, -30, -40], [100, 30, 40], size=(len(scen['units']), 3))
+                    # delta = np.array([-100,0,40])  # 高度差, 速度差, 偏航差.
+                    # if self.rl_targets[my_id] is None:
+                    #     self.rl_targets[my_id] = self.rl_fc_model.get_target(my_plane, delta)
+                    # control_cmds = self.rl_fc_model.control_cmd(my_plane, self.rl_targets[my_id])
+                    # raw_cmd_dict[my_id]['control'] = control_cmds
+                    # self.use_this_rl_target_times[my_id] +=1
                 
             if self.phase == 1:
                 target_pos = self.assigned_targets[my_id]
