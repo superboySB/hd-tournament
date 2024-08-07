@@ -1,10 +1,12 @@
 import numpy as np
 import math
+import os
 from sturnus.geo import *
 import warnings
 from .blue_agent_demo import Agent as BaseAgent
 from .funcs_pid import FlyPid,fly_with_alt_yaw_vel  # 确保 FlyPid 模块正确引用
 from .funcs_rule import Vector3, degrees_limit, is_facing_target
+from .funcs_rl import create_fc_model
 
 class Agent(BaseAgent):
     def __init__(self, side):
@@ -41,6 +43,10 @@ class Agent(BaseAgent):
         self.mid_missile_time = {}    # 记录中距弹上一次打弹时间，用于设置打弹cd
         self.short_missile_time = {}    # 记录近距弹上一次打弹时间，用于设置打弹cd
         self.mid_lock_time = 0
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        model_path = os.path.join(current_dir, "model.pkl")
+        self.rl_fc_model = create_fc_model(model_path)
     
     def calculate_distance_2d(self, plane_info, missile_info):
         return math.sqrt(
@@ -324,14 +330,14 @@ class Agent(BaseAgent):
                 
                 if cos_theta <= 0:
                     if debug_flag:
-                        print("比较好躲!!!")
+                        print("比较好躲!!! 可用脸接!!!")
                     target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],my_plane.z)
                     action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
                     action[0] = 1  # 不改变高度可以让转向加快
                     raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
                 else:
                     if debug_flag:
-                        print("不太好躲!!!交给新唯家成!!!")
+                        print("不太好躲!!! 交给新唯家成!!!")
                     # action = [1,6,0] # 全力右转
                     action = [1,0,0] # 全力左转
                     raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
