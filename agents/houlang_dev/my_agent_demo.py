@@ -338,7 +338,7 @@ class Agent(BaseAgent):
                 _, cos_theta, can_face_target_position, _ = is_facing_target(np.array(self.missile_tracks[closest_missile.ind][-10:]), 
                                                         np.array(self.myplane_tracks[my_plane.ind][-10:]),debug=debug_flag) 
                 
-                if cos_theta <= 0:
+                if cos_theta <= 0.5:
                     if debug_flag:
                         print("比较好躲!!! 可用脸接!!!")
                     target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],my_plane.z)
