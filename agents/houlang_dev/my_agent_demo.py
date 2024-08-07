@@ -171,25 +171,9 @@ class Agent(BaseAgent):
                 print("左转 30度", end=' ')
 
         # --------------------------------------------------------------------
-        action[2] = 0
+        action[2] = 0    # 1是匀速，2是减速
         if debug:
             print("加速", end=' ')
-
-        # if mode == "fix_point":
-        #     if plane.is_uav:
-        #         action[2] = 0
-        #         if debug:
-        #             print("加速", end=' ')
-        #     else:
-        #         action[2] = 1
-        #         if debug:
-        #             print("匀速", end=' ')
-        # elif mode in ["missile","plane"]:
-        #     action[2] = 0
-        #     if debug:
-        #         print("加速", end=' ')
-        # else:
-        #     raise NotImplementedError
             
         return action
 
