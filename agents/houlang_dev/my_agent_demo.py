@@ -329,17 +329,19 @@ class Agent(BaseAgent):
                 _, cos_theta, can_face_target_position, _ = is_facing_target(np.array(self.missile_tracks[closest_missile.ind][-10:]), 
                                                         np.array(self.myplane_tracks[my_plane.ind][-10:]),debug=debug_flag) 
                 
-                target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],my_plane.z)
-                action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
-                action[0] = 1  # 不改变高度可以让转向加快
-
                 if cos_theta <= 0:
                     if debug_flag:
                         print("比较好躲!!!")
+                    target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],my_plane.z)
+                    action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
+                    action[0] = 1  # 不改变高度可以让转向加快
                     raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
                 else:
                     if debug_flag:
                         print("不太好躲!!!交给新唯家成!!!")
+                    # action = [1,6,0] # 全力右转
+                    action = [1,0,0] # 全力左转
+                    raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
                 
             if self.phase == 1:
                 target_pos = self.assigned_targets[my_id]
