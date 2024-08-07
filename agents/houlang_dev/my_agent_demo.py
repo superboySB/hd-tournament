@@ -14,21 +14,22 @@ class Agent(BaseAgent):
         self.id_pidctl_dict = {}
         self.ini_pid = False
         self.run_counts = 0
-        self.phase = 1  # 1 for approach, 2 for circling
+        self.phase = {}  # TODO: 不能让飞机们状态同步呀
         self.heat_zone_center = Vector3(0, 0, -3000) # TODO: 改为建立保护有人机为主的假热区中心，真热区：Vector3(0, 0, -3000)
         self.heat_zone_radius = 15000
 
         self.fake_head_zone_center_dict = {
-            "av1": Vector3(55e3, 0, -4000),
-            "av2": Vector3(-55e3, 0, 5000),
-            "uav1": Vector3(40e3, 0, -3000),
-            "uav2": Vector3(-40e3, 0, 4000),
-            "uav3": Vector3(25e3, 0, -2000),
-            "uav4": Vector3(-25e3, 0, 3000),
+            "av1": Vector3(60e3, 0, 4000),
+            "av2": Vector3(-60e3, 0, 4000),
+            "uav1": Vector3(60e3, 0, 2000),
+            "uav2": Vector3(-60e3, 0, 2000),
+            "uav3": Vector3(60e3, 0, -2000),
+            "uav4": Vector3(-60e3, 0, -2000),
         }
         self.assigned_targets = {}  # 存储每个飞机分配的目标点
         self.use_fake_heat_zone = {}  # 每个飞机是否使用假热区
 
+        self.uav_plane_id_list = []
         self.full_enemy_plane_id_list = []
         self.myplane_tracks = {}  # 记录我方每架飞机的轨迹
         self.enemy_plane_tracks = {} # 记录敌方每架飞机的轨迹
@@ -66,7 +67,7 @@ class Agent(BaseAgent):
     def assign_targets(self, obs, debug=False):
         # 初始化目标分配
         human_plane_ids = [my_id for my_id, my_plane in obs.my_planes.items() if not my_plane.is_uav]
-        uav_plane_ids = [my_id for my_id, my_plane in obs.my_planes.items() if my_plane.is_uav]
+        self.uav_plane_id_list = [my_id for my_id, my_plane in obs.my_planes.items() if my_plane.is_uav]
 
         # 提取 fake_heat_zone 中的目标点
         human_targets = ["av1", "av2"]
@@ -78,19 +79,22 @@ class Agent(BaseAgent):
             self.assigned_targets[my_id] = self.fake_head_zone_center_dict[closest_target]
             self.use_fake_heat_zone[my_id] = True
             human_targets.remove(closest_target)
+            self.phase[my_id] = 1
 
         # 分配给无人机
-        for my_id in uav_plane_ids:
+        for my_id in self.uav_plane_id_list:
             closest_target = min(uav_targets, key=lambda t: self.calculate_distance_3d(obs.my_planes[my_id], self.fake_head_zone_center_dict[t]))
             self.assigned_targets[my_id] = self.fake_head_zone_center_dict[closest_target]
             self.use_fake_heat_zone[my_id] = True
             uav_targets.remove(closest_target)
+            self.phase[my_id] = 1
 
         # 打印分配结果
         if debug:
             print("目标分配结果:")
             for my_id, target in self.assigned_targets.items():
                 print(f"飞机ID: {my_id}, 目标: {[target.x,target.y,target.z]}")
+
 
     def get_action_cmd(self, target, plane, mode="fix_point", debug=False):
         """_summary_
@@ -295,13 +299,13 @@ class Agent(BaseAgent):
             
             if self.use_fake_heat_zone[my_id]:
                 assigned_target = self.assigned_targets[my_id]
-                if self.calculate_distance_3d(my_plane, assigned_target) >= 40000:  # TODO：这个切换比较tricky
-                    self.phase = 1  # 一开始是冲向热区(伪)
+                if self.calculate_distance_3d(my_plane, assigned_target) >= 35000:  # TODO：这个切换比较tricky
+                    self.phase[my_id] = 1  # 一开始是冲向热区(伪)
                 else:
                     self.use_fake_heat_zone[my_id] = False
-                    self.phase = 2  # 然后开启狗斗模式
+                    self.phase[my_id] = 2  # 然后开启狗斗模式
             else:
-                self.phase = 2
+                self.phase[my_id] = 2
             
             closest_missile = None
             for entity_info in obs.rws_infos:
@@ -325,20 +329,23 @@ class Agent(BaseAgent):
 
                     # 判断威胁
                     if (closest_missile is None or distance < self.calculate_distance_3d(my_plane, closest_missile)) and \
-                            (self.calculate_distance_2d(my_plane, entity_info) < 30000):
+                            (self.calculate_distance_2d(my_plane, entity_info) < 35000):
                         self.dangerous_missiles.add(entity_info.ind)
                         if len(self.missile_tracks[entity_info.ind])>10:
                             _, _, _, is_ahead_of_enemy = is_facing_target(np.array(self.missile_tracks[entity_info.ind][-10:]), 
                                                         np.array(self.myplane_tracks[my_plane.ind][-10:]))
-                            if is_ahead_of_enemy: # TODO: 只躲容易躲的弹，否则进攻就是最好的防守
-                                self.phase = 3
+                            if is_ahead_of_enemy: # TODO: 有危险了就不要再走阵型了，至少有人机赶紧开战
                                 closest_missile = entity_info
+                                for uav_id in self.uav_plane_id_list:
+                                    self.phase[uav_id] = 2
+                                    self.use_fake_heat_zone[uav_id] = False
+                                
 
             if closest_missile:
                 _, cos_theta, can_face_target_position, _ = is_facing_target(np.array(self.missile_tracks[closest_missile.ind][-10:]), 
                                                         np.array(self.myplane_tracks[my_plane.ind][-10:]),debug=debug_flag) 
                 
-                if cos_theta <= 0.5:
+                if cos_theta < 0.5:
                     if debug_flag:
                         print("比较好躲!!! 可用脸接!!!")
                     target_pos = Vector3(can_face_target_position[0],can_face_target_position[1],my_plane.z)
@@ -347,14 +354,14 @@ class Agent(BaseAgent):
                     raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
                 else:
                     if debug_flag:
-                        print("不太好躲!!! 交给新唯家成!!!")
+                        print("不太好躲!!! 不躲了!!!")
                     
-                    # 调用李超PID全力转向躲弹
+                    # 调用李超PID全力转向躲弹，还是不行呀
                     # action = [1,6,0] # 全力右转
-                    action = [1,0,0] # 全力左转
-                    raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
+                    # action = [1,0,0] # 全力左转
+                    # raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
 
-                    # TODO: RL飞控的风险较大
+                    # RL飞控的风险较大，无法同时控制高度和角度
                     # delta = np.random.uniform([-100, -30, -40], [100, 30, 40], size=(len(scen['units']), 3))
                     # delta = np.array([0,30,40])  # 高度差, 速度差, 偏航差.
                     # if self.rl_targets[my_id] is None:
@@ -363,7 +370,7 @@ class Agent(BaseAgent):
                     # raw_cmd_dict[my_id]['control'] = control_cmds
                     # self.use_this_rl_target_times[my_id] +=1
                 
-            if self.phase == 1:
+            if self.phase[my_id] == 1:
                 target_pos = self.assigned_targets[my_id]
                 action = self.get_action_cmd(target_pos, my_plane, "fix_point", debug = debug_flag)
                 raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
