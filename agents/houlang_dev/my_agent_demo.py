@@ -339,8 +339,11 @@ class Agent(BaseAgent):
                     if debug_flag:
                         print("不太好躲!!! 交给新唯家成!!!")
                     # action = [1,6,0] # 全力右转
-                    action = [1,0,0] # 全力左转
-                    raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
+                    # action = [1,0,0] # 全力左转
+                    delta = np.array([0,30,-40])  # 高度差, 速度差, 偏航差.
+                    targets = self.rl_fc_model.get_target(my_plane, delta)
+                    control_cmds = self.rl_fc_model.control_cmd(my_plane, targets)
+                    raw_cmd_dict[my_id]['control'] = control_cmds
                 
             if self.phase == 1:
                 target_pos = self.assigned_targets[my_id]
