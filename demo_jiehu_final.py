@@ -5,12 +5,12 @@ from hddf2sim.conf import default_conf
 
 # from agents.team_blue.blue_agent_demo import Agent as BlueAgent
 # from agents.houlang.agent import Agent as BlueAgent
-from agents.houlang0803.agent import Agent as BlueAgent
+from agents.houlang_dev.agent import Agent as BlueAgent
 
 from agents.team_blue.blue_agent_demo import Agent as RedAgent
 # from agents.houlang_dev.agent import Agent as RedAgent
 
-with open("scen.json", "r") as fin:
+with open("scen_fadan.json", "r") as fin:
     scen = json.load(fin)
 
 sim = HDDF2Sim(scen, use_tacview=True, save_replay=True, replay_path="replay.acmi")

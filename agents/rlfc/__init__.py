@@ -1,1 +1,0 @@
-from .red_agent_demo import Agent

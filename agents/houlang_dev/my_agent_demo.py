@@ -266,9 +266,9 @@ class Agent(BaseAgent):
 
     def step(self, obs):
         debug_flag = False
-        # if self.run_counts % 100 == 0:
-        #     print("\n------------------------------------------------------------------\n")
-        #     debug_flag = True
+        if self.run_counts % 100 == 0:
+            print("\n------------------------------------------------------------------\n")
+            debug_flag = True
 
         if self.run_counts == 0:
             self.assign_targets(obs,debug=debug_flag)
@@ -333,13 +333,13 @@ class Agent(BaseAgent):
                 action = self.get_action_cmd(target_pos, my_plane, "missile", debug = debug_flag)
                 action[0] = 1  # 不改变高度可以让转向加快
 
-                if cos_theta < 0.7:
+                if cos_theta <= 0:
                     if debug_flag:
                         print("比较好躲!!!")
                     raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
                 else:
                     if debug_flag:
-                        print("不太好躲!!!交给专家!!!")
+                        print("不太好躲!!!交给新唯家成!!!")
                 
             if self.phase == 1:
                 target_pos = self.assigned_targets[my_id]
