@@ -348,13 +348,15 @@ class Agent(BaseAgent):
                 else:
                     if debug_flag:
                         print("不太好躲!!! 交给新唯家成!!!")
+                    
+                    # 调用李超PID全力转向躲弹
                     # action = [1,6,0] # 全力右转
                     action = [1,0,0] # 全力左转
                     raw_cmd_dict[my_id]['control'] = fly_with_alt_yaw_vel(my_plane, action, self.id_pidctl_dict[my_id])
 
                     # TODO: RL飞控的风险较大
                     # delta = np.random.uniform([-100, -30, -40], [100, 30, 40], size=(len(scen['units']), 3))
-                    # delta = np.array([-100,0,40])  # 高度差, 速度差, 偏航差.
+                    # delta = np.array([0,30,40])  # 高度差, 速度差, 偏航差.
                     # if self.rl_targets[my_id] is None:
                     #     self.rl_targets[my_id] = self.rl_fc_model.get_target(my_plane, delta)
                     # control_cmds = self.rl_fc_model.control_cmd(my_plane, self.rl_targets[my_id])
