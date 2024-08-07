@@ -397,7 +397,7 @@ def load_params(path_dir):
   #   aux_params = cloudpickle.load(f)
   # rms_params = aux_params.obs[0]['obs']
   # data = {'model': model_params, 'rms': rms_params}
-  with open('model.pkl', 'rb') as f:
+  with open('./agents/houlang_dev/model.pkl', 'rb') as f:
     data = cloudpickle.load(f)
   model_params = data['model']
   rms_params = data['rms']
@@ -556,7 +556,7 @@ def test_fc(path):
   model = create_fc_model(path)
   with open('scen.json', "r") as f:
     scen = json.load(f)
-  sim = HDDF2Sim(scen, use_tacview=False, save_replay=False, replay_path="replay.acmi")
+  sim = HDDF2Sim(scen, use_tacview=True, save_replay=False, replay_path="replay.acmi")
   sim.reset()
   threshold = np.array([20, 5, 10])
   met_times = collections.defaultdict(int)

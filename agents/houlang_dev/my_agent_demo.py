@@ -3,15 +3,8 @@ import math
 from sturnus.geo import *
 import warnings
 from .blue_agent_demo import Agent as BaseAgent
-from .funcs import FlyPid, Vector3, degrees_limit, is_facing_target  # 确保 FlyPid 模块正确引用
-
-
-last_target_pitch = 0
-last_target_heading = 0
-last_target_roll = 0
-norm_delta_altitude = np.array([500, 0, -500])
-norm_delta_heading = np.array([-np.pi / 6, -np.pi / 12, -np.pi / 36, 0, np.pi / 36, np.pi / 12, np.pi / 6])
-norm_delta_velocity = np.array([0.05, 0, -0.05])
+from .funcs_pid import FlyPid,fly_with_alt_yaw_vel  # 确保 FlyPid 模块正确引用
+from .funcs_rule import Vector3, degrees_limit, is_facing_target
 
 class Agent(BaseAgent):
     def __init__(self, side):
@@ -378,52 +371,3 @@ class Agent(BaseAgent):
         self.run_counts += 1
         return raw_cmd_dict
 
-
-def fly_with_alt_yaw_vel(plane, action:list, fly_pid:FlyPid):
-    """_summary_
-
-    Args:
-        action (list): [(0-2), (0-4), (0-2)] ,
-
-    Returns:
-        list: [aileron, elevator, rudder, throttle]
-    """
-    global last_target_pitch, last_target_heading, last_target_roll
-    # 确定转向
-    temp_turn = math.degrees(norm_delta_heading[action[1]])
-    # 根据当前状态想移动的角度来计算目标滚转角度
-    rate = (abs(temp_turn) / 35)
-    # if rate >= 1:
-    #     rate = 0.99
-    if abs(temp_turn) < 4:
-        target_roll = 0
-    elif temp_turn > 0: 
-        target_roll = math.radians(90) * rate # 右转
-    else:
-        target_roll = math.radians(-90) * rate # 左转
-    
-    target_pitch = np.arctan2(norm_delta_altitude[action[0]], 500)
-    
-    # 设置目标姿态角角速度
-    fly_pid.set_tar_value(target_pitch - plane.pitch, norm_delta_heading[action[1]], target_roll - plane.roll)
-    cmd_list = fly_pid.get_control_cmd(plane.omega_p, plane.omega_q, plane.omega_r)
-    
-    # 控制加力来改变速度
-    if norm_delta_velocity[action[2]] < 0:
-        cmd_list[3] = 0
-    elif norm_delta_velocity[action[2]] == 0:
-        cmd_list[3] = 0.395 # 匀速
-        
-    # 限制控制俯仰轴的指令值，防止飞机失控
-    if abs(cmd_list[1])  > 0.7:
-        cmd_list[1] = 0.7 * np.sign(cmd_list[1])
-        
-    # 飞机倒过来飞时特殊处理，俯仰轴取反方向
-    if -90 >= math.degrees(plane.roll) or math.degrees(plane.roll) >= 90:
-        cmd_list[1] = -1 * cmd_list[1]
-    
-    last_target_pitch = target_pitch
-    last_target_heading = plane.yaw + math.radians(temp_turn)
-    last_target_roll = target_roll
-    
-    return cmd_list
