@@ -18,7 +18,7 @@
             "side":"red",
             "type":"fighter",
             "is_uav": true,
-            "x":-2e3,
+            "x":1e3,
             "y":-45e3,
             "height":9e3,
             "yaw": 1.571,
@@ -36,7 +36,7 @@
             "side":"red",
             "type":"fighter",
             "is_uav": false,
-            "x":6e3,
+            "x":0.5e3,
             "y":-45e3,
             "height":9e3,
             "yaw": 1.571,
@@ -48,7 +48,7 @@
             "side":"red", 
             "type":"fighter",
             "is_uav": true,
-            "x":-8e3, 
+            "x":-0.5e3, 
             "y":-45e3,
             "height":9e3,
             "yaw": 1.571,
@@ -74,7 +74,7 @@
             "side":"blue",
             "type":"fighter",
             "is_uav": true,
-            "x":3e3, "y":45e3, "height":9e3,
+            "x":1e3, "y":45e3, "height":9e3,
             "yaw": -1.571,
             "loadout":{"mid_missile":0,"short_missile":4}
         },
@@ -82,7 +82,7 @@
             "side":"blue",
             "type":"fighter",
             "is_uav": true,
-            "x":-2e3, "y":45e3, "height":9e3,
+            "x":-1e3, "y":45e3, "height":9e3,
             "yaw": -1.571,
             "loadout":{"mid_missile":0,"short_missile":4}
         },
@@ -90,7 +90,7 @@
             "side":"blue",
             "type":"fighter",
             "is_uav": false,
-            "x":10e3, "y":45e3, "height":5e3,
+            "x":0.5e3, "y":45e3, "height":5e3,
             "yaw": -1.573,
             "loadout":{"mid_missile":2,"short_missile":2}
         },
@@ -98,7 +98,7 @@
             "side":"blue",
             "type":"fighter",
             "is_uav": true,
-            "x":8e3, "y":45e3, "height":4e3,
+            "x":-0.5e3, "y":45e3, "height":4e3,
             "yaw": -1.573,
             "loadout":{"mid_missile":0,"short_missile":4}
         },
@@ -106,7 +106,7 @@
             "side":"blue",
             "type":"fighter",
             "is_uav": true,
-            "x":-6e3, "y":45e3, "height":12e3,
+            "x":1e3, "y":45e3, "height":12e3,
             "yaw": -1.573,
             "loadout":{"mid_missile":0,"short_missile":4}
         }
